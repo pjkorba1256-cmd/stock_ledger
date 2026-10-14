@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { InventoryApiService } from './services/inventory-api.service';
@@ -20,6 +20,8 @@ import {
 })
 export class App implements OnInit {
   private readonly api = inject(InventoryApiService);
+  private readonly cdr = inject(ChangeDetectorRef);
+
 
   activeTab: 'stock-on-hand' | 'moves' | 'new-move' | 'reconciliation' =
     'stock-on-hand';
@@ -102,29 +104,43 @@ export class App implements OnInit {
   startEditReservation(q: StockQuant): void {
     this.editingQuantId = q.id;
     this.editingReservedValue = Number(q.reservedQuantity);
+    this.cdr.markForCheck();
   }
 
   cancelEditReservation(): void {
     this.editingQuantId = null;
+    this.savingReservation = false;
+    this.cdr.markForCheck();
   }
 
   saveReservation(q: StockQuant): void {
-    if (this.editingReservedValue < 0) {
+    const rawVal = Number(this.editingReservedValue);
+    if (isNaN(rawVal)) {
+      this.showAlert('Please enter a valid numeric reserved quantity.', 'error');
+      return;
+    }
+    const val = Math.round(rawVal * 1000) / 1000;
+    if (val < 0) {
       this.showAlert('Reserved quantity cannot be negative.', 'error');
       return;
     }
     const onHand = Number(q.quantity);
-    if (this.editingReservedValue > onHand) {
+    if (val > onHand) {
       this.showAlert(
-        `Cannot reserve ${this.editingReservedValue.toFixed(3)} units. Available on-hand is only ${onHand.toFixed(3)} units.`,
+        `Cannot reserve ${val.toFixed(3)} units. Available on-hand is only ${onHand.toFixed(3)} units.`,
         'error',
       );
       return;
     }
 
+    const previousReserved = q.reservedQuantity;
     this.savingReservation = true;
+    // Optimistic calculation: immediately update row object so Available recalculates instantly
+    q.reservedQuantity = val.toFixed(3);
+    this.cdr.markForCheck();
+
     this.api
-      .updateQuantReservation(q.id, this.editingReservedValue)
+      .updateQuantReservation(q.id, val)
       .subscribe({
         next: (updated) => {
           this.savingReservation = false;
@@ -134,13 +150,16 @@ export class App implements OnInit {
             `Reserved quantity updated to ${updated.reservedQuantity} for quant ${q.id.slice(0, 8)}...`,
             'success',
           );
+          this.cdr.detectChanges();
         },
         error: (err) => {
           this.savingReservation = false;
+          q.reservedQuantity = previousReserved;
           this.showAlert(
             err.error?.message || 'Failed to update reserved quantity.',
             'error',
           );
+          this.cdr.detectChanges();
         },
       });
   }
@@ -243,9 +262,11 @@ export class App implements OnInit {
           this.quants = res.data;
           this.quantsPagination = res.pagination;
           this.loadingSoh = false;
+          this.cdr.markForCheck();
         },
         error: (err) => {
           this.loadingSoh = false;
+          this.cdr.markForCheck();
           this.showAlert(
             err.error?.message || 'Failed to load stock on hand',
             'error',
@@ -280,9 +301,11 @@ export class App implements OnInit {
           this.moves = res.data;
           this.movesPagination = res.pagination;
           this.loadingMoves = false;
+          this.cdr.markForCheck();
         },
         error: (err) => {
           this.loadingMoves = false;
+          this.cdr.markForCheck();
           this.showAlert(
             err.error?.message || 'Failed to load stock movements',
             'error',

@@ -300,6 +300,7 @@
                       class="inline-quant-input font-mono"
                       [class.input-error]="editingReservedValue > +q.quantity || editingReservedValue < 0"
                       [(ngModel)]="editingReservedValue"
+                      (focus)="$any($event.target).select()"
                       (keyup.enter)="saveReservation(q)"
                       (keyup.escape)="cancelEditReservation()"
                       [disabled]="savingReservation"
@@ -327,7 +328,12 @@
                 </ng-container>
               </td>
               <td class="text-right font-mono text-emerald font-bold">
-                {{ (+q.quantity - +q.reservedQuantity).toFixed(3) }}
+                <ng-container *ngIf="editingQuantId === q.id && editingReservedValue >= 0 && editingReservedValue <= +q.quantity">
+                  {{ (+q.quantity - +editingReservedValue).toFixed(3) }}
+                </ng-container>
+                <ng-container *ngIf="editingQuantId !== q.id || editingReservedValue < 0 || editingReservedValue > +q.quantity">
+                  {{ (+q.quantity - +q.reservedQuantity).toFixed(3) }}
+                </ng-container>
               </td>
               <td class="text-right">
                 <span class="status-capsule-dark">Active</span>
