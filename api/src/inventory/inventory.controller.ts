@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   Query,
 } from '@nestjs/common';
@@ -23,7 +24,9 @@ import {
 
 import {
   stockOnHandQuerySchema,
+  updateQuantReservationSchema,
   type StockOnHandQuery,
+  type UpdateQuantReservationInput,
 } from './inventory-query.schema.js';
 
 import {
@@ -46,6 +49,24 @@ export class InventoryController {
     query: StockOnHandQuery,
   ) {
     return this.inventoryService.getStockOnHand(query);
+  }
+
+  @Patch('quants/:id/reserve')
+  updateQuantReservation(
+    @Param(
+      new ZodValidationPipe(
+        stockMoveParamsSchema,
+        'Invalid quant ID parameter',
+      ),
+    )
+    params: StockMoveParams,
+    @Body(new ZodValidationPipe(updateQuantReservationSchema))
+    body: UpdateQuantReservationInput,
+  ) {
+    return this.inventoryService.updateQuantReservation(
+      params.id,
+      body.reservedQuantity,
+    );
   }
 
   @Get('warehouses')

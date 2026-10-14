@@ -92,6 +92,40 @@ export class InventoryService implements OnApplicationBootstrap {
     };
   }
 
+  async updateQuantReservation(id: string, reservedQuantity: number) {
+    const [quant] = await this.db
+      .select()
+      .from(invStockQuants)
+      .where(eq(invStockQuants.id, id))
+      .limit(1);
+
+    if (!quant) {
+      throw new NotFoundException(`Stock quant with ID ${id} not found`);
+    }
+
+    if (reservedQuantity < 0) {
+      throw new BadRequestException('Reserved quantity cannot be negative.');
+    }
+
+    const onHand = Number(quant.quantity);
+    if (reservedQuantity > onHand) {
+      throw new BadRequestException(
+        `Cannot reserve ${reservedQuantity.toFixed(3)} units. On-hand quantity is only ${onHand.toFixed(3)} units.`,
+      );
+    }
+
+    const [updated] = await this.db
+      .update(invStockQuants)
+      .set({
+        reservedQuantity: reservedQuantity.toFixed(3),
+        updatedAt: new Date(),
+      })
+      .where(eq(invStockQuants.id, id))
+      .returning();
+
+    return updated;
+  }
+
   async createWarehouse(input: CreateWarehouseInput) {
     const parsed = createWarehouseSchema.safeParse(input);
 

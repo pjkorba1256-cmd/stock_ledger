@@ -283,7 +283,53 @@
                 </button>
               </td>
               <td class="text-right font-mono font-bold">{{ q.quantity }}</td>
-              <td class="text-right font-mono text-muted">{{ q.reservedQuantity }}</td>
+              <td class="text-right font-mono">
+                <ng-container *ngIf="editingQuantId !== q.id">
+                  <button
+                    class="reservation-badge"
+                    (click)="startEditReservation(q)"
+                    title="Click to manually adjust reserved quantity"
+                  >
+                    <span>{{ q.reservedQuantity }}</span>
+                    <svg class="pencil-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                  </button>
+                </ng-container>
+
+                <ng-container *ngIf="editingQuantId === q.id">
+                  <div class="inline-edit-wrap">
+                    <input
+                      type="number"
+                      step="0.001"
+                      min="0"
+                      [max]="+q.quantity"
+                      class="inline-quant-input font-mono"
+                      [(ngModel)]="editingReservedValue"
+                      (keyup.enter)="saveReservation(q)"
+                      (keyup.escape)="cancelEditReservation()"
+                      [disabled]="savingReservation"
+                    />
+                    <button
+                      class="inline-action-btn btn-save"
+                      (click)="saveReservation(q)"
+                      [disabled]="savingReservation"
+                      title="Save (Enter)"
+                    >
+                      ✓
+                    </button>
+                    <button
+                      class="inline-action-btn btn-cancel"
+                      (click)="cancelEditReservation()"
+                      [disabled]="savingReservation"
+                      title="Cancel (Esc)"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </ng-container>
+              </td>
               <td class="text-right font-mono text-emerald font-bold">
                 {{ (+q.quantity - +q.reservedQuantity).toFixed(3) }}
               </td>

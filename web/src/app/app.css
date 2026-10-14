@@ -1033,3 +1033,84 @@
   font-size: 0.9rem;
   font-weight: 600;
 }
+
+/* Inline Reservation Editing */
+.reservation-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px dashed #d1d5db;
+  border-radius: 6px;
+  padding: 3px 8px;
+  color: #4b5563;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+  transition: all 0.15s ease;
+}
+
+.reservation-badge:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+  color: #111827;
+}
+
+.pencil-icon {
+  opacity: 0.4;
+  transition: opacity 0.15s ease;
+}
+
+.reservation-badge:hover .pencil-icon {
+  opacity: 1;
+}
+
+.inline-edit-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.inline-quant-input {
+  width: 90px;
+  padding: 3px 6px;
+  border: 1px solid #111827;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  background: #ffffff;
+  color: #111827;
+  outline: none;
+  text-align: right;
+}
+
+.inline-action-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  cursor: pointer;
+  border: none;
+  transition: all 0.12s ease;
+}
+
+.inline-action-btn.btn-save {
+  background: #10b981;
+  color: #ffffff;
+}
+
+.inline-action-btn.btn-save:hover {
+  background: #059669;
+}
+
+.inline-action-btn.btn-cancel {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.inline-action-btn.btn-cancel:hover {
+  background: #e5e7eb;
+  color: #111827;
+}

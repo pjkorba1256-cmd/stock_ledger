@@ -125,4 +125,10 @@ export class InventoryApiService {
   getWarehouses(): Observable<any[]> {
     return this.http.get<any[]>(`${this.baseUrl}/warehouses`);
   }
+
+  updateQuantReservation(id: string, reservedQuantity: number): Observable<StockQuant> {
+    return this.http.patch<StockQuant>(`${this.baseUrl}/quants/${id}/reserve`, {
+      reservedQuantity,
+    });
+  }
 }

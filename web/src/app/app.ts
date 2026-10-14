@@ -94,6 +94,57 @@ export class App implements OnInit {
   copiedField: string | null = null;
   seedingData = false;
 
+  // Inline reservation editing state
+  editingQuantId: string | null = null;
+  editingReservedValue = 0;
+  savingReservation = false;
+
+  startEditReservation(q: StockQuant): void {
+    this.editingQuantId = q.id;
+    this.editingReservedValue = Number(q.reservedQuantity);
+  }
+
+  cancelEditReservation(): void {
+    this.editingQuantId = null;
+  }
+
+  saveReservation(q: StockQuant): void {
+    if (this.editingReservedValue < 0) {
+      this.showAlert('Reserved quantity cannot be negative.', 'error');
+      return;
+    }
+    const onHand = Number(q.quantity);
+    if (this.editingReservedValue > onHand) {
+      this.showAlert(
+        `Cannot reserve ${this.editingReservedValue.toFixed(3)} units. Available on-hand is only ${onHand.toFixed(3)} units.`,
+        'error',
+      );
+      return;
+    }
+
+    this.savingReservation = true;
+    this.api
+      .updateQuantReservation(q.id, this.editingReservedValue)
+      .subscribe({
+        next: (updated) => {
+          this.savingReservation = false;
+          this.editingQuantId = null;
+          q.reservedQuantity = updated.reservedQuantity;
+          this.showAlert(
+            `Reserved quantity updated to ${updated.reservedQuantity} for quant ${q.id.slice(0, 8)}...`,
+            'success',
+          );
+        },
+        error: (err) => {
+          this.savingReservation = false;
+          this.showAlert(
+            err.error?.message || 'Failed to update reserved quantity.',
+            'error',
+          );
+        },
+      });
+  }
+
   ngOnInit(): void {
     this.loadStockOnHand();
     this.loadStockMoves();
