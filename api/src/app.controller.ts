@@ -59,19 +59,22 @@ export class AppController {
         ),
       ]);
 
+    const getRow0 = (res: any) => (res?.rows ? res.rows[0] : Array.isArray(res) ? res[0] : res);
+    const getRows = (res: any) => (res?.rows ? res.rows : Array.isArray(res) ? res : []);
+
     return {
       status: 'ok',
       database: 'connected',
       provider,
       host,
-      databaseName: (dbInfo.rows[0] as any)?.db,
-      dbUser: (dbInfo.rows[0] as any)?.usr,
-      tables: tablesRes.rows.map((r: any) => r.table_name),
+      databaseName: getRow0(dbInfo)?.db,
+      dbUser: getRow0(dbInfo)?.usr,
+      tables: getRows(tablesRes).map((r: any) => r.table_name),
       rowCounts: {
-        inv_warehouses: (whCount.rows[0] as any)?.count ?? 0,
-        inv_locations: (locCount.rows[0] as any)?.count ?? 0,
-        inv_stock_quants: (quantCount.rows[0] as any)?.count ?? 0,
-        inv_stock_moves: (moveCount.rows[0] as any)?.count ?? 0,
+        inv_warehouses: getRow0(whCount)?.count ?? 0,
+        inv_locations: getRow0(locCount)?.count ?? 0,
+        inv_stock_quants: getRow0(quantCount)?.count ?? 0,
+        inv_stock_moves: getRow0(moveCount)?.count ?? 0,
       },
     };
   }

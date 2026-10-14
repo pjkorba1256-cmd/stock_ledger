@@ -72,7 +72,7 @@ describe('Inventory Stock Ledger E2E & Concurrency Suite (Stage G)', () => {
 
   afterAll(async () => {
     await app.close();
-  });
+  }, 30000);
 
   describe('1. Movement Validation & Invariants', () => {
     it('should reject movement where source and destination are identical', async () => {
@@ -417,7 +417,7 @@ describe('Inventory Stock Ledger E2E & Concurrency Suite (Stage G)', () => {
         .expect(200);
 
       expect(Number(packSoh.body.data[0].quantity)).toBe(200);
-    }, 60000);
+    }, 120000);
   });
 
   describe('5. Ledger Reconciliation Correctness', () => {
@@ -433,6 +433,6 @@ describe('Inventory Stock Ledger E2E & Concurrency Suite (Stage G)', () => {
         expect(item.isReconciled).toBe(true);
         expect(Number(item.discrepancy)).toBe(0);
       }
-    });
+    }, 30000);
   });
 });

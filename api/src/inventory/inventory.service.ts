@@ -973,9 +973,30 @@ export class InventoryService implements OnApplicationBootstrap {
       }
     }
 
+    // Initialize realistic random sample reservations (between 6% and 20% of on-hand quantity)
+    try {
+      const seededQuants = await this.db.select().from(invStockQuants);
+      for (const q of seededQuants) {
+        const qty = Number(q.quantity);
+        if (qty > 0) {
+          const pct = (Math.floor(Math.random() * 15) + 6) / 100;
+          const randReserved = Math.min(qty, Math.round(qty * pct * 10) / 10);
+          await this.db
+            .update(invStockQuants)
+            .set({
+              reservedQuantity: randReserved.toFixed(3),
+              updatedAt: new Date(),
+            })
+            .where(eq(invStockQuants.id, q.id));
+        }
+      }
+    } catch (err) {
+      console.warn('[InventoryService] Quant reservation initialization notice:', err);
+    }
+
     return {
       success: true,
-      message: 'Demo inventory seeded successfully with full mathematical integrity.',
+      message: 'Demo inventory seeded successfully with full mathematical integrity and sample reservations.',
       movesCreated: createdCount,
     };
   }

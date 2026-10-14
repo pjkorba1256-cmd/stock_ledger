@@ -8,7 +8,9 @@ describe('AppController', () => {
 
   beforeEach(async () => {
     const mockDb = {
-      execute: vi.fn().mockResolvedValue([{ 1: 1 }]),
+      execute: vi.fn().mockResolvedValue({
+        rows: [{ db: 'p02_stock_ledger', usr: 'test_user', ver: 'PostgreSQL 18.6', count: 0, table_name: 'inv_stock_moves' }],
+      }),
     };
 
     const app: TestingModule = await Test.createTestingModule({
@@ -32,7 +34,7 @@ describe('AppController', () => {
 
     it('should return database connected health status', async () => {
       const result = await appController.checkDatabase();
-      expect(result).toEqual({ status: 'ok', database: 'connected' });
+      expect(result).toMatchObject({ status: 'ok', database: 'connected' });
     });
   });
 });

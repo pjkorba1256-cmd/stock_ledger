@@ -96,73 +96,7 @@ export class App implements OnInit {
   copiedField: string | null = null;
   seedingData = false;
 
-  // Inline reservation editing state
-  editingQuantId: string | null = null;
-  editingReservedValue = 0;
-  savingReservation = false;
 
-  startEditReservation(q: StockQuant): void {
-    this.editingQuantId = q.id;
-    this.editingReservedValue = Number(q.reservedQuantity);
-    this.cdr.markForCheck();
-  }
-
-  cancelEditReservation(): void {
-    this.editingQuantId = null;
-    this.savingReservation = false;
-    this.cdr.markForCheck();
-  }
-
-  saveReservation(q: StockQuant): void {
-    const rawVal = Number(this.editingReservedValue);
-    if (isNaN(rawVal)) {
-      this.showAlert('Please enter a valid numeric reserved quantity.', 'error');
-      return;
-    }
-    const val = Math.round(rawVal * 1000) / 1000;
-    if (val < 0) {
-      this.showAlert('Reserved quantity cannot be negative.', 'error');
-      return;
-    }
-    const onHand = Number(q.quantity);
-    if (val > onHand) {
-      this.showAlert(
-        `Cannot reserve ${val.toFixed(3)} units. Available on-hand is only ${onHand.toFixed(3)} units.`,
-        'error',
-      );
-      return;
-    }
-
-    const previousReserved = q.reservedQuantity;
-    this.savingReservation = true;
-    // Optimistic calculation: immediately update row object so Available recalculates instantly
-    q.reservedQuantity = val.toFixed(3);
-    this.cdr.markForCheck();
-
-    this.api
-      .updateQuantReservation(q.id, val)
-      .subscribe({
-        next: (updated) => {
-          this.savingReservation = false;
-          this.editingQuantId = null;
-          q.reservedQuantity = updated.reservedQuantity;
-          this.showAlert(
-            `Reserved quantity updated to ${updated.reservedQuantity} for quant ${q.id.slice(0, 8)}...`,
-            'success',
-          );
-          this.cdr.detectChanges();
-        },
-        error: (err) => {
-          this.savingReservation = false;
-          q.reservedQuantity = previousReserved;
-          this.showAlert(
-            err.error?.message || 'Failed to update reserved quantity.',
-            'error',
-          );
-          this.cdr.detectChanges();
-        },
-      });
-  }
 
   ngOnInit(): void {
     this.loadStockOnHand();
