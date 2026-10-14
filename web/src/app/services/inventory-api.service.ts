@@ -3,10 +3,12 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
   CreateStockMovePayload,
+  LocationItem,
   PaginatedResponse,
   ReconciliationReport,
   StockMove,
   StockQuant,
+  WarehouseItem,
 } from '../models/inventory.models';
 import { environment } from '../../environments/environment';
 
@@ -118,12 +120,12 @@ export class InventoryApiService {
     );
   }
 
-  getLocations(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.baseUrl}/locations`);
+  getLocations(): Observable<LocationItem[]> {
+    return this.http.get<LocationItem[]>(`${this.baseUrl}/locations`);
   }
 
-  getWarehouses(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.baseUrl}/warehouses`);
+  getWarehouses(): Observable<WarehouseItem[]> {
+    return this.http.get<WarehouseItem[]>(`${this.baseUrl}/warehouses`);
   }
 
   updateQuantReservation(id: string, reservedQuantity: number): Observable<StockQuant> {

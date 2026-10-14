@@ -4,12 +4,80 @@ import { FormsModule } from '@angular/forms';
 import { InventoryApiService } from './services/inventory-api.service';
 import {
   CreateStockMovePayload,
+  LocationItem,
   Pagination,
   ReconciliationReport,
   ReferenceType,
   StockMove,
   StockQuant,
 } from './models/inventory.models';
+
+export interface CatalogProduct {
+  id: string;
+  name: string;
+  sku: string;
+}
+
+export const KNOWN_PRODUCTS: CatalogProduct[] = [
+  {
+    id: '11111111-1111-4111-8111-111111111111',
+    name: 'Apple MacBook Pro 16" M3 Max',
+    sku: 'MBP-16-M3M',
+  },
+  {
+    id: '22222222-2222-4222-8222-222222222222',
+    name: 'Dell UltraSharp 32" 4K Monitor',
+    sku: 'DEL-U32-4K',
+  },
+  {
+    id: '33333333-3333-4333-8333-333333333333',
+    name: 'Keychron Q1 Pro Mechanical Keyboard',
+    sku: 'KEY-Q1-PRO',
+  },
+  {
+    id: '44444444-4444-4444-8444-444444444444',
+    name: 'Sony WH-1000XM5 ANC Headphones',
+    sku: 'SNY-WH1000-M5',
+  },
+  {
+    id: '55555555-5555-4555-8555-555555555555',
+    name: 'Logitech MX Master 3S Mouse',
+    sku: 'LOG-MX-3S',
+  },
+  {
+    id: 'fde0a9c4-24ad-495d-8b2a-fc7e42038e5a',
+    name: 'High-Tensile Steel Rods (10mm)',
+    sku: 'STL-ROD-10',
+  },
+  {
+    id: 'c7287c2a-c0b1-439d-83fd-39a3309588f1',
+    name: 'Industrial Cement Bags (50kg)',
+    sku: 'CMT-BAG-50',
+  },
+  {
+    id: '002c517d-8539-465a-86d1-a70ce12b29d3',
+    name: 'Structural Aluminum Angle (2in)',
+    sku: 'ALM-ANG-20',
+  },
+  {
+    id: '69edcf40-1e34-4a85-a544-772fe830c4c8',
+    name: 'Hardwood Plywood Sheet (18mm)',
+    sku: 'PLY-SHT-18',
+  },
+];
+
+const DEFAULT_LOCATIONS: Record<string, string> = {
+  'd2961899-7090-4d21-94ef-81e63aeb646d': 'Global Vendor Partner (Inbound)',
+  '7172f4fd-8c7c-4115-adff-9fd36ff84ecd': 'Storage Area (Rack A - Vault)',
+  '5571a122-f657-452c-ae2f-7387005512a4': 'Receiving Area 2 (Rack B - Picking Bins)',
+  '88888888-8888-4888-8888-888888888888': 'Customer Fulfillment Dock (Outward)',
+  '6f869dce-8bb7-46fb-b27d-ed7c2211acf0': 'Vendor Source',
+  '0241d0b0-d4c8-4cf0-99c0-bc4900946326': 'Main Storage Zone',
+  '9998e5ca-fa69-4ff8-969d-7344016aadb8': 'Packing Zone',
+  'b5796ae1-641d-4bc6-aae6-fd937fcc413b': 'Vendor Source',
+  'd526f8be-5238-471b-b3d1-177937c8276d': 'Main Storage Zone',
+  'babb61d2-ef92-4efc-9947-5250a6941afc': 'Packing Zone',
+};
 
 @Component({
   selector: 'app-root',
@@ -90,17 +158,61 @@ export class App implements OnInit {
   reconcileProductFilter = '';
   loadingReconciliation = false;
 
+  // Master catalog and dynamic locations
+  readonly knownProducts: CatalogProduct[] = KNOWN_PRODUCTS;
+  locations: LocationItem[] = [];
+  locationsMap = new Map<string, LocationItem>();
+
   // Global alert & copy feedback state
   alertMessage: string | null = null;
   alertType: 'success' | 'error' | 'info' = 'info';
   copiedField: string | null = null;
   seedingData = false;
 
-
-
   ngOnInit(): void {
+    this.loadLocations();
     this.loadStockOnHand();
     this.loadStockMoves();
+  }
+
+  loadLocations(): void {
+    this.api.getLocations().subscribe({
+      next: (locs) => {
+        this.locations = locs;
+        this.locationsMap.clear();
+        for (const loc of locs) {
+          this.locationsMap.set(loc.id.toLowerCase(), loc);
+        }
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        console.warn('Could not load locations from API, falling back to defaults:', err);
+      },
+    });
+  }
+
+  getProductName(productId: string | null | undefined): string {
+    if (!productId) return 'Unknown Product';
+    const found = this.knownProducts.find(
+      (p) => p.id.toLowerCase() === productId.toLowerCase(),
+    );
+    if (found) return found.name;
+    return `Product (${productId.slice(0, 8)}…)`;
+  }
+
+  getLocationName(locationId: string | null | undefined): string {
+    if (!locationId) return 'Unknown Location';
+    const loc = this.locationsMap.get(locationId.toLowerCase());
+    if (loc) return loc.name;
+    const def = DEFAULT_LOCATIONS[locationId.toLowerCase()];
+    if (def) return def;
+    return `Location (${locationId.slice(0, 8)}…)`;
+  }
+
+  getLocationCode(locationId: string | null | undefined): string | null {
+    if (!locationId) return null;
+    const loc = this.locationsMap.get(locationId.toLowerCase());
+    return loc ? loc.code : null;
   }
 
   seedDemoData(): void {
@@ -114,6 +226,7 @@ export class App implements OnInit {
           res.message || 'Sample inventory loaded successfully! Quants and movements updated.',
           'success',
         );
+        this.loadLocations();
         this.loadStockOnHand(1);
         this.loadStockMoves(1);
       },
@@ -155,9 +268,10 @@ export class App implements OnInit {
   }
 
   refreshAll(): void {
+    this.loadLocations();
     this.loadStockOnHand(this.quantsPagination.page);
     this.loadStockMoves(this.movesPagination.page);
-    this.showAlert('Ledger and snapshot tables synced with database', 'info');
+    this.showAlert('Ledger, locations, and snapshot tables synced with database', 'info');
   }
 
   // Presets for rapid evaluator demonstration

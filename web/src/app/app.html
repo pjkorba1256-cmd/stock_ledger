@@ -233,9 +233,9 @@
         <table class="skillset-table">
           <thead>
             <tr>
-              <th>QUANT UUID</th>
-              <th>PRODUCT UUID</th>
-              <th>LOCATION UUID</th>
+              <th>QUANT ID</th>
+              <th>PRODUCT</th>
+              <th>LOCATION</th>
               <th class="text-right">ON-HAND</th>
               <th class="text-right">RESERVED</th>
               <th class="text-right">AVAILABLE</th>
@@ -255,24 +255,33 @@
                 </button>
               </td>
               <td>
-                <button
-                  class="chip-mono"
-                  (click)="copyToClipboard(q.productId, 'Product ID')"
-                  title="Click to copy full UUID"
-                >
-                  {{ q.productId.slice(0, 8) }}…{{ q.productId.slice(-4) }}
-                  <span class="copy-hint">COPY</span>
-                </button>
+                <div class="entity-cell">
+                  <span class="entity-name" [title]="getProductName(q.productId)">{{ getProductName(q.productId) }}</span>
+                  <button
+                    class="chip-mono chip-subtle"
+                    (click)="copyToClipboard(q.productId, 'Product ID')"
+                    title="Click to copy full UUID"
+                  >
+                    {{ q.productId.slice(0, 8) }}…{{ q.productId.slice(-4) }}
+                    <span class="copy-hint">COPY</span>
+                  </button>
+                </div>
               </td>
               <td>
-                <button
-                  class="chip-mono"
-                  (click)="copyToClipboard(q.locationId, 'Location ID')"
-                  title="Click to copy full UUID"
-                >
-                  {{ q.locationId.slice(0, 8) }}…{{ q.locationId.slice(-4) }}
-                  <span class="copy-hint">COPY</span>
-                </button>
+                <div class="entity-cell">
+                  <span class="entity-name" [title]="getLocationName(q.locationId)">
+                    {{ getLocationName(q.locationId) }}
+                    <span class="entity-tag" *ngIf="getLocationCode(q.locationId)">{{ getLocationCode(q.locationId) }}</span>
+                  </span>
+                  <button
+                    class="chip-mono chip-subtle"
+                    (click)="copyToClipboard(q.locationId, 'Location ID')"
+                    title="Click to copy full UUID"
+                  >
+                    {{ q.locationId.slice(0, 8) }}…{{ q.locationId.slice(-4) }}
+                    <span class="copy-hint">COPY</span>
+                  </button>
+                </div>
               </td>
               <td class="text-right font-mono font-bold">{{ q.quantity }}</td>
               <td class="text-right font-mono">{{ q.reservedQuantity }}</td>
@@ -373,7 +382,7 @@
             <tr>
               <th>MOVE ID</th>
               <th>TYPE</th>
-              <th>PRODUCT UUID</th>
+              <th>PRODUCT</th>
               <th class="text-right">QUANTITY</th>
               <th>SOURCE</th>
               <th>DESTINATION</th>
@@ -400,35 +409,50 @@
                 </span>
               </td>
               <td>
-                <button
-                  class="chip-mono"
-                  (click)="copyToClipboard(m.productId, 'Product ID')"
-                  title="Click to copy full UUID"
-                >
-                  {{ m.productId.slice(0, 8) }}…
-                  <span class="copy-hint">COPY</span>
-                </button>
+                <div class="entity-cell">
+                  <span class="entity-name" [title]="getProductName(m.productId)">{{ getProductName(m.productId) }}</span>
+                  <button
+                    class="chip-mono chip-subtle"
+                    (click)="copyToClipboard(m.productId, 'Product ID')"
+                    title="Click to copy full UUID"
+                  >
+                    {{ m.productId.slice(0, 8) }}…{{ m.productId.slice(-4) }}
+                    <span class="copy-hint">COPY</span>
+                  </button>
+                </div>
               </td>
               <td class="text-right font-mono font-bold">{{ m.quantity }}</td>
               <td>
-                <button
-                  class="chip-mono"
-                  (click)="copyToClipboard(m.sourceLocationId, 'Source ID')"
-                  title="Click to copy full UUID"
-                >
-                  {{ m.sourceLocationId.slice(0, 8) }}…
-                  <span class="copy-hint">COPY</span>
-                </button>
+                <div class="entity-cell">
+                  <span class="entity-name" [title]="getLocationName(m.sourceLocationId)">
+                    {{ getLocationName(m.sourceLocationId) }}
+                    <span class="entity-tag" *ngIf="getLocationCode(m.sourceLocationId)">{{ getLocationCode(m.sourceLocationId) }}</span>
+                  </span>
+                  <button
+                    class="chip-mono chip-subtle"
+                    (click)="copyToClipboard(m.sourceLocationId, 'Source ID')"
+                    title="Click to copy full UUID"
+                  >
+                    {{ m.sourceLocationId.slice(0, 8) }}…{{ m.sourceLocationId.slice(-4) }}
+                    <span class="copy-hint">COPY</span>
+                  </button>
+                </div>
               </td>
               <td>
-                <button
-                  class="chip-mono"
-                  (click)="copyToClipboard(m.destinationLocationId, 'Dest ID')"
-                  title="Click to copy full UUID"
-                >
-                  {{ m.destinationLocationId.slice(0, 8) }}…
-                  <span class="copy-hint">COPY</span>
-                </button>
+                <div class="entity-cell">
+                  <span class="entity-name" [title]="getLocationName(m.destinationLocationId)">
+                    {{ getLocationName(m.destinationLocationId) }}
+                    <span class="entity-tag" *ngIf="getLocationCode(m.destinationLocationId)">{{ getLocationCode(m.destinationLocationId) }}</span>
+                  </span>
+                  <button
+                    class="chip-mono chip-subtle"
+                    (click)="copyToClipboard(m.destinationLocationId, 'Dest ID')"
+                    title="Click to copy full UUID"
+                  >
+                    {{ m.destinationLocationId.slice(0, 8) }}…{{ m.destinationLocationId.slice(-4) }}
+                    <span class="copy-hint">COPY</span>
+                  </button>
+                </div>
               </td>
               <td>
                 <span class="status-capsule" [ngClass]="'capsule-' + m.state.toLowerCase()">
@@ -536,39 +560,66 @@
           </div>
 
           <div class="form-cell">
-            <label class="form-label">PRODUCT UUID</label>
-            <input
-              type="text"
-              class="pill-input full-width font-mono"
+            <label class="form-label">PRODUCT</label>
+            <select
+              class="pill-select full-width"
               [(ngModel)]="newMove.productId"
               name="productId"
-              placeholder="e.g. 11111111-1111-4111-8111-111111111111"
               required
-            />
+            >
+              <option *ngFor="let p of knownProducts" [value]="p.id">
+                {{ p.name }} ({{ p.sku }})
+              </option>
+            </select>
+            <span class="form-hint font-mono">UUID: {{ newMove.productId }}</span>
           </div>
 
           <div class="form-cell">
-            <label class="form-label">SOURCE LOCATION UUID</label>
+            <label class="form-label">SOURCE LOCATION</label>
+            <select
+              *ngIf="locations.length > 0"
+              class="pill-select full-width"
+              [(ngModel)]="newMove.sourceLocationId"
+              name="sourceLocationId"
+              required
+            >
+              <option *ngFor="let loc of locations" [value]="loc.id">
+                {{ loc.name }} [{{ loc.type }}] ({{ loc.code }})
+              </option>
+            </select>
             <input
+              *ngIf="locations.length === 0"
               type="text"
               class="pill-input full-width font-mono"
               [(ngModel)]="newMove.sourceLocationId"
               name="sourceLocationId"
               required
             />
-            <span class="form-hint">Physical shelf for transfers, or vendor UUID for receipts.</span>
+            <span class="form-hint font-mono">{{ getLocationName(newMove.sourceLocationId) }} ({{ newMove.sourceLocationId.slice(0, 8) }}…)</span>
           </div>
 
           <div class="form-cell">
-            <label class="form-label">DESTINATION LOCATION UUID</label>
+            <label class="form-label">DESTINATION LOCATION</label>
+            <select
+              *ngIf="locations.length > 0"
+              class="pill-select full-width"
+              [(ngModel)]="newMove.destinationLocationId"
+              name="destinationLocationId"
+              required
+            >
+              <option *ngFor="let loc of locations" [value]="loc.id">
+                {{ loc.name }} [{{ loc.type }}] ({{ loc.code }})
+              </option>
+            </select>
             <input
+              *ngIf="locations.length === 0"
               type="text"
               class="pill-input full-width font-mono"
               [(ngModel)]="newMove.destinationLocationId"
               name="destinationLocationId"
               required
             />
-            <span class="form-hint">Must differ from source. Storage zone for receipts.</span>
+            <span class="form-hint font-mono">{{ getLocationName(newMove.destinationLocationId) }} ({{ newMove.destinationLocationId.slice(0, 8) }}…)</span>
           </div>
 
           <div class="form-cell">
@@ -656,7 +707,7 @@
             <thead>
               <tr>
                 <th>LOCATION</th>
-                <th>PRODUCT UUID</th>
+                <th>PRODUCT</th>
                 <th class="text-right">LEDGER EXPECTED</th>
                 <th class="text-right">QUANTS SNAPSHOT</th>
                 <th class="text-right">DRIFT DELTA</th>
@@ -665,15 +716,34 @@
             </thead>
             <tbody>
               <tr *ngFor="let item of reconciliationReport.auditDetails">
-                <td><strong>{{ item.locationName }}</strong></td>
                 <td>
-                  <button
-                    class="chip-mono"
-                    (click)="copyToClipboard(item.productId, 'Product ID')"
-                    title="Click to copy full UUID"
-                  >
-                    {{ item.productId.slice(0, 8) }}…
-                  </button>
+                  <div class="entity-cell">
+                    <span class="entity-name" [title]="item.locationName || getLocationName(item.locationId)">
+                      {{ item.locationName || getLocationName(item.locationId) }}
+                      <span class="entity-tag" *ngIf="getLocationCode(item.locationId)">{{ getLocationCode(item.locationId) }}</span>
+                    </span>
+                    <button
+                      class="chip-mono chip-subtle"
+                      (click)="copyToClipboard(item.locationId, 'Location ID')"
+                      title="Click to copy full UUID"
+                    >
+                      {{ item.locationId.slice(0, 8) }}…{{ item.locationId.slice(-4) }}
+                      <span class="copy-hint">COPY</span>
+                    </button>
+                  </div>
+                </td>
+                <td>
+                  <div class="entity-cell">
+                    <span class="entity-name" [title]="getProductName(item.productId)">{{ getProductName(item.productId) }}</span>
+                    <button
+                      class="chip-mono chip-subtle"
+                      (click)="copyToClipboard(item.productId, 'Product ID')"
+                      title="Click to copy full UUID"
+                    >
+                      {{ item.productId.slice(0, 8) }}…{{ item.productId.slice(-4) }}
+                      <span class="copy-hint">COPY</span>
+                    </button>
+                  </div>
                 </td>
                 <td class="text-right font-mono font-bold">{{ item.expectedLedgerQuantity }}</td>
                 <td class="text-right font-mono font-bold">{{ item.actualQuantQuantity }}</td>

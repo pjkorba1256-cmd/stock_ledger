@@ -660,9 +660,10 @@
 }
 
 .skillset-table td {
-  padding: 16px 18px;
+  padding: 14px 18px;
   border-bottom: 1px solid #f3f4f6;
   color: #1f2937;
+  vertical-align: middle;
 }
 
 .skillset-table tr:hover td {
@@ -737,7 +738,26 @@
 .pill-adjustment { background: #fef9c3; color: #854d0e; }
 .pill-scrap { background: #ffe4e6; color: #be123c; }
 
-/* Interactive Monospace UUID Chips */
+/* Interactive Monospace UUID Chips & Entity Cells */
+.entity-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  min-width: 130px;
+}
+
+.entity-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #111827;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 260px;
+}
+
 .chip-mono {
   display: inline-flex;
   align-items: center;
@@ -751,6 +771,31 @@
   color: #374151;
   cursor: pointer;
   transition: all 0.15s ease;
+}
+
+.chip-subtle {
+  font-size: 0.70rem;
+  padding: 2px 7px;
+  background: #f9fafb;
+  border-color: #e5e7eb;
+  color: #6b7280;
+}
+
+.chip-subtle:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+  color: #111827;
+}
+
+.entity-tag {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: #6b7280;
+  background: #f3f4f6;
+  padding: 1px 5px;
+  border-radius: 4px;
+  margin-left: 6px;
 }
 
 .chip-mono:hover {

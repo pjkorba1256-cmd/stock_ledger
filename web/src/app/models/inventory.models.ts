@@ -80,3 +80,28 @@ export interface CreateStockMovePayload {
   performedBy: string;
   notes?: string;
 }
+
+export interface LocationItem {
+  id: string;
+  warehouseId: string;
+  parentLocationId?: string | null;
+  name: string;
+  code: string;
+  type: string;
+  barcode?: string | null;
+  sortOrder?: number | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface WarehouseItem {
+  id: string;
+  merchantId: string;
+  name: string;
+  code: string;
+  address?: Record<string, unknown> | null;
+  isActive: boolean;
+  isDefault: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
