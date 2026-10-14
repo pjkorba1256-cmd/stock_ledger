@@ -105,7 +105,7 @@ export const invStockMoves = pgTable(
       precision: 14,
       scale: 3,
     }).notNull(),
-    unitCostPaise: bigint('unit_cost_paise', { mode: 'bigint' }),
+    unitCostPaise: bigint('unit_cost_paise', { mode: 'number' }),
     state: varchar('state', { length: 12 }).default('DRAFT').notNull(),
     scheduledDate: timestamp('scheduled_date', { withTimezone: true }),
     doneDate: timestamp('done_date', { withTimezone: true }),
@@ -170,7 +170,7 @@ export const invStockQuants = pgTable(
     })
       .default('0')
       .notNull(),
-    costPricePaise: bigint('cost_price_paise', { mode: 'bigint' }),
+    costPricePaise: bigint('cost_price_paise', { mode: 'number' }),
     lastCountDate: timestamp('last_count_date', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()

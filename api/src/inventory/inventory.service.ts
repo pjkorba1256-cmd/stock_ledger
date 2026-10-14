@@ -260,10 +260,7 @@ export class InventoryService implements OnApplicationBootstrap {
         sourceLocationId: data.sourceLocationId,
         destinationLocationId: data.destinationLocationId,
         quantity: String(data.quantity),
-        unitCostPaise:
-          data.unitCostPaise === undefined
-            ? undefined
-            : BigInt(data.unitCostPaise),
+        unitCostPaise: data.unitCostPaise,
         performedBy: data.performedBy,
         notes: data.notes,
         state: 'DRAFT',
