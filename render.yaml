@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: stock-ledger-api
+    runtime: node
+    rootDir: api
+    plan: free
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npm run db:migrate && npm run start:prod
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: stock-ledger-db
+          property: connectionString
+      - key: REDIS_ENABLED
+        value: false
+
+databases:
+  - name: stock-ledger-db
+    plan: free
+    databaseName: p02_stock_ledger
+    user: stock_user

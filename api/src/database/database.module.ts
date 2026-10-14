@@ -19,7 +19,17 @@ export const DATABASE = 'DATABASE';
           throw new Error('DATABASE_URL is not configured');
         }
 
-        const pool = new Pool({ connectionString });
+        const isCloudDb =
+          connectionString.includes('sslmode=require') ||
+          connectionString.includes('render.com') ||
+          connectionString.includes('supabase') ||
+          connectionString.includes('neon.tech') ||
+          process.env.NODE_ENV === 'production';
+
+        const pool = new Pool({
+          connectionString,
+          ssl: isCloudDb ? { rejectUnauthorized: false } : undefined,
+        });
 
         return drizzle(pool);
       },

@@ -8,13 +8,14 @@ import {
   StockMove,
   StockQuant,
 } from '../models/inventory.models';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root',
 })
 export class InventoryApiService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = 'http://localhost:3000/inventory';
+  private readonly baseUrl = environment.apiUrl;
 
   getStockOnHand(
     page = 1,
