@@ -1,0 +1,68 @@
+/* ==========================================================================
+   SKILLSET-STYLE MODERN SAAS DASHBOARD (GLOBAL STYLES)
+   ========================================================================== */
+
+:root {
+  --bg-canvas: #f4f5f7;
+  --bg-surface: #ffffff;
+  --bg-card-dark: #1e1e24;
+  --bg-card-dark-hover: #2a2a32;
+  --bg-input: #ffffff;
+  --bg-pill-active: #52535a;
+
+  --border-card: rgba(0, 0, 0, 0.05);
+  --border-light: #eaecf0;
+  --border-focus: #111827;
+
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-muted: #9ca3af;
+  --text-emerald: #10b981;
+
+  --font-sans: 'Geist', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Minimalist Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-canvas);
+}
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* Monospace Helpers */
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+::selection {
+  background: #111827;
+  color: #ffffff;
+}

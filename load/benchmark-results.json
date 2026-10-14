@@ -1,0 +1,50 @@
+[
+  {
+    "scenario": "Stock-on-Hand Query (Quants Snapshot Table)",
+    "connections": 50,
+    "duration": "10s",
+    "reqPerSec": "399.2",
+    "totalRequests": 3992,
+    "latencyP50": 124,
+    "latencyP90": 143,
+    "latencyP99": 436,
+    "latencyAvg": 124,
+    "errors": 0
+  },
+  {
+    "scenario": "Stock Movements History (Audit Ledger with Pagination & Filter)",
+    "connections": 50,
+    "duration": "10s",
+    "reqPerSec": "3.8",
+    "totalRequests": 38,
+    "latencyP50": 5822,
+    "latencyP90": 9185,
+    "latencyP99": 9809,
+    "latencyAvg": 5807.19,
+    "errors": 12
+  },
+  {
+    "scenario": "Ledger Reconciliation Audit Query",
+    "connections": 20,
+    "duration": "10s",
+    "reqPerSec": "0.0",
+    "totalRequests": 0,
+    "latencyP50": 0,
+    "latencyP90": 0,
+    "latencyP99": 0,
+    "latencyAvg": 0,
+    "errors": 20
+  },
+  {
+    "scenario": "Draft Movement Creation (Write Load)",
+    "connections": 20,
+    "duration": "10s",
+    "reqPerSec": "0.0",
+    "totalRequests": 0,
+    "latencyP50": 0,
+    "latencyP90": 0,
+    "latencyP99": 0,
+    "latencyAvg": 0,
+    "errors": 20
+  }
+]
