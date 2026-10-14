@@ -371,24 +371,56 @@
   cursor: pointer;
 }
 
-/* Toast Notification */
+/* Toast Notification (Floating Fixed) */
 .skillset-toast {
+  position: fixed;
+  top: 24px;
+  right: 28px;
+  z-index: 9999;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 16px;
   background: #1e1e24;
   color: #ffffff;
-  padding: 12px 20px;
+  padding: 14px 22px;
   border-radius: 14px;
-  margin-bottom: 22px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
   font-size: 0.88rem;
+  max-width: 480px;
+  animation: toastSlideIn 0.2s ease-out;
+}
+
+@keyframes toastSlideIn {
+  from {
+    transform: translateY(-12px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.toast-error {
+  background: #ef4444 !important;
+  color: #ffffff !important;
+}
+
+.toast-success {
+  background: #10b981 !important;
+  color: #ffffff !important;
+}
+
+.toast-info {
+  background: #1e1e24 !important;
+  color: #ffffff !important;
 }
 
 .toast-close {
   background: transparent;
   border: none;
-  color: #9ca3af;
+  color: rgba(255, 255, 255, 0.8);
   cursor: pointer;
   font-size: 1rem;
 }
@@ -1113,4 +1145,24 @@
 .inline-action-btn.btn-cancel:hover {
   background: #e5e7eb;
   color: #111827;
+}
+
+.inline-quant-input.input-error {
+  border-color: #ef4444 !important;
+  background-color: #fef2f2 !important;
+  color: #b91c1c !important;
+}
+
+.inline-action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.inline-error-msg {
+  font-size: 0.7rem;
+  color: #ef4444;
+  font-weight: 700;
+  margin-top: 3px;
+  text-align: right;
+  letter-spacing: -0.01em;
 }

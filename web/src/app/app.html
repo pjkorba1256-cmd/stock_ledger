@@ -298,6 +298,7 @@
                       min="0"
                       [max]="+q.quantity"
                       class="inline-quant-input font-mono"
+                      [class.input-error]="editingReservedValue > +q.quantity || editingReservedValue < 0"
                       [(ngModel)]="editingReservedValue"
                       (keyup.enter)="saveReservation(q)"
                       (keyup.escape)="cancelEditReservation()"
@@ -306,10 +307,10 @@
                     <button
                       class="inline-action-btn btn-save"
                       (click)="saveReservation(q)"
-                      [disabled]="savingReservation"
-                      title="Save (Enter)"
+                      [disabled]="savingReservation || editingReservedValue > +q.quantity || editingReservedValue < 0"
+                      [title]="editingReservedValue > +q.quantity ? ('Cannot exceed on-hand ' + q.quantity) : 'Save (Enter)'"
                     >
-                      ✓
+                      {{ savingReservation ? '…' : '✓' }}
                     </button>
                     <button
                       class="inline-action-btn btn-cancel"
@@ -319,6 +320,9 @@
                     >
                       ✕
                     </button>
+                  </div>
+                  <div *ngIf="editingReservedValue > +q.quantity" class="inline-error-msg">
+                    Max: {{ q.quantity }}
                   </div>
                 </ng-container>
               </td>
