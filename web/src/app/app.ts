@@ -92,10 +92,35 @@ export class App implements OnInit {
   alertMessage: string | null = null;
   alertType: 'success' | 'error' | 'info' = 'info';
   copiedField: string | null = null;
+  seedingData = false;
 
   ngOnInit(): void {
     this.loadStockOnHand();
     this.loadStockMoves();
+  }
+
+  seedDemoData(): void {
+    if (this.seedingData) return;
+    this.seedingData = true;
+    this.showAlert('Seeding demo warehouses, locations, and movements...', 'info');
+    this.api.seedDemoData().subscribe({
+      next: (res) => {
+        this.seedingData = false;
+        this.showAlert(
+          res.message || 'Sample inventory loaded successfully! Quants and movements updated.',
+          'success',
+        );
+        this.loadStockOnHand(1);
+        this.loadStockMoves(1);
+      },
+      error: (err) => {
+        this.seedingData = false;
+        this.showAlert(
+          err.error?.message || 'Failed to seed sample inventory.',
+          'error',
+        );
+      },
+    });
   }
 
   showAlert(message: string, type: 'success' | 'error' | 'info' = 'info'): void {

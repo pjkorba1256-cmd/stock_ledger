@@ -48,6 +48,11 @@ export class InventoryController {
     return this.inventoryService.getStockOnHand(query);
   }
 
+  @Get('warehouses')
+  getWarehouses() {
+    return this.inventoryService.getWarehouses();
+  }
+
   @Post('warehouses')
   createWarehouse(
     @Body(new ZodValidationPipe(createWarehouseSchema))
@@ -56,12 +61,22 @@ export class InventoryController {
     return this.inventoryService.createWarehouse(body);
   }
 
+  @Get('locations')
+  getLocations() {
+    return this.inventoryService.getLocations();
+  }
+
   @Post('locations')
   createLocation(
     @Body(new ZodValidationPipe(createLocationSchema))
     body: CreateLocationInput,
   ) {
     return this.inventoryService.createLocation(body);
+  }
+
+  @Post('seed')
+  seedDemoData() {
+    return this.inventoryService.seedDemoData(true);
   }
 
   @Post('stock-moves')

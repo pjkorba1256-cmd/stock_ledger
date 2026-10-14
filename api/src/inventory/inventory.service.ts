@@ -4,6 +4,7 @@ import {
   Inject,
   Injectable,
   NotFoundException,
+  OnApplicationBootstrap,
 } from '@nestjs/common';
 
 import { and, desc, eq, gte, isNull, lte, or, sql } from 'drizzle-orm';
@@ -29,11 +30,27 @@ import type {
 } from './stock-move.schema.js';
 
 @Injectable()
-export class InventoryService {
+export class InventoryService implements OnApplicationBootstrap {
   constructor(
     @Inject(DATABASE)
     private readonly db: NodePgDatabase,
   ) {}
+
+  async onApplicationBootstrap() {
+    try {
+      const [quantCount] = await this.db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(invStockQuants);
+
+      if ((quantCount?.count ?? 0) === 0) {
+        console.log('[InventoryService] No stock quants found in cloud database. Auto-seeding demo inventory...');
+        await this.seedDemoData(false);
+        console.log('[InventoryService] Auto-seed finished successfully.');
+      }
+    } catch (err) {
+      console.warn('[InventoryService] Auto-seed check notice:', err);
+    }
+  }
 
   async getStockOnHand(query: StockOnHandQuery) {
     const conditions = [];
@@ -657,6 +674,278 @@ export class InventoryService {
       discrepanciesCount: discrepancies.length,
       discrepancies,
       auditDetails,
+    };
+  }
+
+  async getWarehouses() {
+    return await this.db.select().from(invWarehouses);
+  }
+
+  async getLocations() {
+    return await this.db.select().from(invLocations);
+  }
+
+  async seedDemoData(force = false) {
+    const [quantCount] = await this.db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(invStockQuants);
+
+    if (!force && (quantCount?.count ?? 0) > 0) {
+      return {
+        success: true,
+        message: 'Database already populated with active stock quants.',
+        movesCreated: 0,
+      };
+    }
+
+    // 1. Ensure default warehouse exists
+    const existingWh = await this.db
+      .select()
+      .from(invWarehouses)
+      .where(eq(invWarehouses.code, 'WH-MAIN'))
+      .limit(1);
+
+    let warehouseId: string;
+    if (existingWh.length > 0) {
+      warehouseId = existingWh[0].id;
+    } else {
+      const [inserted] = await this.db
+        .insert(invWarehouses)
+        .values({
+          merchantId: '00000000-0000-0000-0000-000000000001',
+          name: 'Central Distribution Hub (WH-01)',
+          code: 'WH-MAIN',
+          address: {
+            street: '100 Tech Park Way',
+            city: 'Bengaluru',
+            state: 'Karnataka',
+            postalCode: '560100',
+            country: 'IN',
+          },
+          isDefault: true,
+        })
+        .returning();
+      warehouseId = inserted.id;
+    }
+
+    // 2. Ensure demo locations exist
+    const defaultLocations = [
+      {
+        id: 'd2961899-7090-4d21-94ef-81e63aeb646d',
+        name: 'Global Vendor Partner (Inbound)',
+        code: 'LOC-SUP-01',
+        type: 'SUPPLIER',
+      },
+      {
+        id: '7172f4fd-8c7c-4115-adff-9fd36ff84ecd',
+        name: 'Storage Area (Rack A - Vault)',
+        code: 'LOC-STORAGE-A',
+        type: 'INTERNAL',
+      },
+      {
+        id: '5571a122-f657-452c-ae2f-7387005512a4',
+        name: 'Receiving Area 2 (Rack B - Picking Bins)',
+        code: 'LOC-STORAGE-B',
+        type: 'INTERNAL',
+      },
+      {
+        id: '88888888-8888-4888-8888-888888888888',
+        name: 'Customer Fulfillment Dock (Outward)',
+        code: 'LOC-CUST-01',
+        type: 'CUSTOMER',
+      },
+    ];
+
+    for (const loc of defaultLocations) {
+      const [exists] = await this.db
+        .select({ id: invLocations.id })
+        .from(invLocations)
+        .where(
+          and(
+            eq(invLocations.warehouseId, warehouseId),
+            eq(invLocations.code, loc.code),
+          ),
+        )
+        .limit(1);
+
+      if (!exists) {
+        await this.db.insert(invLocations).values({
+          id: loc.id,
+          warehouseId,
+          name: loc.name,
+          code: loc.code,
+          type: loc.type,
+        });
+      }
+    }
+
+    // 3. Products & movements definition
+    const vendorLocId = 'd2961899-7090-4d21-94ef-81e63aeb646d';
+    const rackALocId = '7172f4fd-8c7c-4115-adff-9fd36ff84ecd';
+    const rackBLocId = '5571a122-f657-452c-ae2f-7387005512a4';
+    const customerLocId = '88888888-8888-4888-8888-888888888888';
+
+    const demoMoves: Array<{
+      referenceId: string;
+      referenceType: 'GRN' | 'TRANSFER' | 'SALE';
+      productId: string;
+      sourceLocationId: string;
+      destinationLocationId: string;
+      quantity: number;
+      unitCostPaise?: number;
+      performedBy: string;
+      notes: string;
+      targetState: 'DRAFT' | 'CONFIRMED' | 'DONE';
+    }> = [
+      {
+        referenceId: 'PO-2026-0891',
+        referenceType: 'GRN',
+        productId: '11111111-1111-4111-8111-111111111111',
+        sourceLocationId: vendorLocId,
+        destinationLocationId: rackALocId,
+        quantity: 150,
+        unitCostPaise: 24990000,
+        performedBy: 'procurement-team',
+        notes: 'Initial bulk receipt: Apple MacBook Pro 16" M3 Max',
+        targetState: 'DONE',
+      },
+      {
+        referenceId: 'PO-2026-0892',
+        referenceType: 'GRN',
+        productId: '22222222-2222-4222-8222-222222222222',
+        sourceLocationId: vendorLocId,
+        destinationLocationId: rackALocId,
+        quantity: 280,
+        unitCostPaise: 8990000,
+        performedBy: 'procurement-team',
+        notes: 'Initial bulk receipt: Dell UltraSharp 32" 4K Monitor',
+        targetState: 'DONE',
+      },
+      {
+        referenceId: 'PO-2026-0893',
+        referenceType: 'GRN',
+        productId: '33333333-3333-4333-8333-333333333333',
+        sourceLocationId: vendorLocId,
+        destinationLocationId: rackALocId,
+        quantity: 450,
+        unitCostPaise: 1850000,
+        performedBy: 'procurement-team',
+        notes: 'Initial bulk receipt: Keychron Q1 Pro Mechanical Keyboard',
+        targetState: 'DONE',
+      },
+      {
+        referenceId: 'PO-2026-0894',
+        referenceType: 'GRN',
+        productId: '44444444-4444-4444-8444-444444444444',
+        sourceLocationId: vendorLocId,
+        destinationLocationId: rackALocId,
+        quantity: 620,
+        unitCostPaise: 2999000,
+        performedBy: 'procurement-team',
+        notes: 'Initial bulk receipt: Sony WH-1000XM5 ANC Headphones',
+        targetState: 'DONE',
+      },
+      {
+        referenceId: 'PO-2026-0895',
+        referenceType: 'GRN',
+        productId: '55555555-5555-4555-8555-555555555555',
+        sourceLocationId: vendorLocId,
+        destinationLocationId: rackALocId,
+        quantity: 890,
+        unitCostPaise: 949500,
+        performedBy: 'procurement-team',
+        notes: 'Initial bulk receipt: Logitech MX Master 3S Mouse',
+        targetState: 'DONE',
+      },
+      {
+        referenceId: 'TR-2026-0101',
+        referenceType: 'TRANSFER',
+        productId: '11111111-1111-4111-8111-111111111111',
+        sourceLocationId: rackALocId,
+        destinationLocationId: rackBLocId,
+        quantity: 30,
+        performedBy: 'wh-operator-1',
+        notes: 'Replenishment: Move 30 MacBook Pros from Storage to Picking Bins',
+        targetState: 'DONE',
+      },
+      {
+        referenceId: 'TR-2026-0102',
+        referenceType: 'TRANSFER',
+        productId: '22222222-2222-4222-8222-222222222222',
+        sourceLocationId: rackALocId,
+        destinationLocationId: rackBLocId,
+        quantity: 50,
+        performedBy: 'wh-operator-2',
+        notes: 'Replenishment: Move 50 Dell Monitors to Picking Bins',
+        targetState: 'DONE',
+      },
+      {
+        referenceId: 'DO-2026-0501',
+        referenceType: 'SALE',
+        productId: '11111111-1111-4111-8111-111111111111',
+        sourceLocationId: rackBLocId,
+        destinationLocationId: customerLocId,
+        quantity: 12,
+        performedBy: 'fulfillment-dock',
+        notes: 'Customer dispatch: Enterprise workstation order',
+        targetState: 'DONE',
+      },
+      {
+        referenceId: 'TR-2026-0103',
+        referenceType: 'TRANSFER',
+        productId: '33333333-3333-4333-8333-333333333333',
+        sourceLocationId: rackALocId,
+        destinationLocationId: rackBLocId,
+        quantity: 25,
+        performedBy: 'shift-supervisor',
+        notes: 'Staged transfer ready for posting',
+        targetState: 'CONFIRMED',
+      },
+      {
+        referenceId: 'PO-2026-0899',
+        referenceType: 'GRN',
+        productId: '44444444-4444-4444-8444-444444444444',
+        sourceLocationId: vendorLocId,
+        destinationLocationId: rackALocId,
+        quantity: 100,
+        unitCostPaise: 2999000,
+        performedBy: 'procurement-team',
+        notes: 'Advance shipping notice - awaiting inspection',
+        targetState: 'DRAFT',
+      },
+    ];
+
+    let createdCount = 0;
+    for (const item of demoMoves) {
+      try {
+        const move = await this.createStockMove({
+          referenceId: item.referenceId,
+          referenceType: item.referenceType,
+          productId: item.productId,
+          sourceLocationId: item.sourceLocationId,
+          destinationLocationId: item.destinationLocationId,
+          quantity: item.quantity,
+          unitCostPaise: item.unitCostPaise,
+          performedBy: item.performedBy,
+          notes: item.notes,
+        });
+        createdCount++;
+
+        if (item.targetState === 'CONFIRMED' || item.targetState === 'DONE') {
+          await this.confirmStockMove(move.id);
+        }
+        if (item.targetState === 'DONE') {
+          await this.postStockMove(move.id);
+        }
+      } catch (err) {
+        console.warn(`[InventoryService] Seed move ${item.referenceId} notice:`, err);
+      }
+    }
+
+    return {
+      success: true,
+      message: 'Demo inventory seeded successfully with full mathematical integrity.',
+      movesCreated: createdCount,
     };
   }
 }

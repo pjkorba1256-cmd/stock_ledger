@@ -110,4 +110,19 @@ export class InventoryApiService {
       params,
     });
   }
+
+  seedDemoData(): Observable<{ success: boolean; message: string; movesCreated?: number }> {
+    return this.http.post<{ success: boolean; message: string; movesCreated?: number }>(
+      `${this.baseUrl}/seed`,
+      {},
+    );
+  }
+
+  getLocations(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/locations`);
+  }
+
+  getWarehouses(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/warehouses`);
+  }
 }
