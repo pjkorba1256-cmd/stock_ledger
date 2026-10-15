@@ -404,7 +404,7 @@ export class App implements OnInit {
       (p) => p.id.toLowerCase() === productId.toLowerCase(),
     );
     if (found) return found.name;
-    return `Product (${productId.slice(0, 8)}…)`;
+    return `Item (${productId.slice(0, 8)}…)`;
   }
 
   getProductSku(productId: string | null | undefined): string {
@@ -412,7 +412,7 @@ export class App implements OnInit {
     const found = this.knownProducts.find(
       (p) => p.id.toLowerCase() === productId.toLowerCase(),
     );
-    return found ? found.sku : productId.slice(0, 8);
+    return found ? found.sku : `SKU-${productId.slice(0, 8).toUpperCase()}`;
   }
 
   getLocationName(locationId: string | null | undefined): string {
@@ -982,6 +982,12 @@ export class App implements OnInit {
           this.showAlert(err.error?.message || 'Failed to load stock on hand', 'error');
         },
       });
+  }
+
+  resetSohFilters(): void {
+    this.sohProductFilter = '';
+    this.sohLocationFilter = '';
+    this.loadStockOnHand(1);
   }
 
   loadStockMoves(page = 1): void {

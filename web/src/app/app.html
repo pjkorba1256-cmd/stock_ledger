@@ -421,15 +421,16 @@
     <!-- ============================================================== -->
     <section *ngIf="activeTab === 'stock-on-hand'" class="content-section">
       <div class="filter-toolbar">
-        <div class="filter-inputs">
+        <div class="search-box">
           <input
             type="text"
-            class="form-input"
-            placeholder="Filter by Product UUID / SKU"
+            class="form-input search-input"
+            placeholder="Search by Product Name, SKU, or UUID..."
             [(ngModel)]="sohProductFilter"
             (keyup.enter)="loadStockOnHand(1)"
           />
           <button class="btn btn-secondary btn-sm" (click)="loadStockOnHand(1)">Search</button>
+          <button *ngIf="sohProductFilter" class="btn btn-ghost btn-sm" (click)="resetSohFilters()">Clear</button>
         </div>
       </div>
 
@@ -450,8 +451,8 @@
             <tr *ngFor="let q of quants">
               <td>
                 <div class="product-cell">
-                  <span class="product-name">{{ getProductName(q.productId) }}</span>
-                  <span class="product-sku">{{ q.productId }}</span>
+                  <span class="product-name" [title]="q.productId">{{ getProductName(q.productId) }}</span>
+                  <span class="product-sku">{{ getProductSku(q.productId) }}</span>
                 </div>
               </td>
               <td>{{ getLocationName(q.locationId) }}</td>
@@ -465,6 +466,11 @@
                 {{ (Number(q.quantity) - Number(q.reservedQuantity)).toFixed(3) }}
               </td>
               <td class="text-muted">{{ q.lastCountDate ?? 'Never' }}</td>
+            </tr>
+            <tr *ngIf="quants.length === 0 && !loadingSoh">
+              <td colspan="7" class="text-center text-muted" style="padding: 36px 20px;">
+                No stock on hand quants found. Click <strong>Seed FreshMart Demo Data</strong> in the topbar to populate inventory.
+              </td>
             </tr>
           </tbody>
         </table>
@@ -517,7 +523,12 @@
               </td>
               <td class="font-mono font-semibold">{{ m.referenceId ?? 'N/A' }}</td>
               <td><span class="type-pill">{{ m.referenceType ?? 'GENERAL' }}</span></td>
-              <td>{{ getProductName(m.productId) }}</td>
+              <td>
+                <div class="product-cell">
+                  <span class="product-name" [title]="m.productId">{{ getProductName(m.productId) }}</span>
+                  <span class="product-sku">{{ getProductSku(m.productId) }}</span>
+                </div>
+              </td>
               <td>
                 <span class="loc-flow">
                   {{ getLocationName(m.sourceLocationId) }} &rarr; {{ getLocationName(m.destinationLocationId) }}
@@ -526,6 +537,11 @@
               <td class="text-right font-mono font-bold">{{ m.quantity }}</td>
               <td class="text-muted">{{ m.performedBy }}</td>
               <td class="text-muted">{{ m.createdAt | date:'short' }}</td>
+            </tr>
+            <tr *ngIf="moves.length === 0 && !loadingMoves">
+              <td colspan="8" class="text-center text-muted" style="padding: 36px 20px;">
+                No stock ledger movements found matching filter criteria.
+              </td>
             </tr>
           </tbody>
         </table>
@@ -560,12 +576,22 @@
           <tbody>
             <tr *ngFor="let lot of lots">
               <td class="font-bold">{{ lot.name }}</td>
-              <td>{{ getProductName(lot.productId) }}</td>
+              <td>
+                <div class="product-cell">
+                  <span class="product-name" [title]="lot.productId">{{ getProductName(lot.productId) }}</span>
+                  <span class="product-sku">{{ getProductSku(lot.productId) }}</span>
+                </div>
+              </td>
               <td>{{ lot.manufacturingDate ?? 'N/A' }}</td>
               <td class="font-semibold">{{ lot.expiryDate ?? 'Non-Perishable' }}</td>
               <td>{{ lot.reference ?? 'N/A' }}</td>
               <td class="text-muted">{{ lot.notes ?? '-' }}</td>
               <td class="text-muted">{{ lot.createdAt | date:'short' }}</td>
+            </tr>
+            <tr *ngIf="lots.length === 0 && !loadingLots">
+              <td colspan="7" class="text-center text-muted" style="padding: 36px 20px;">
+                No catalog lots registered. Click <strong>Receive Inward Lot</strong> to register a new batch.
+              </td>
             </tr>
           </tbody>
         </table>
@@ -601,7 +627,12 @@
           <tbody>
             <tr *ngFor="let r of reservations">
               <td class="font-mono font-bold">{{ r.orderReference }}</td>
-              <td>{{ getProductName(r.productId) }}</td>
+              <td>
+                <div class="product-cell">
+                  <span class="product-name" [title]="r.productId">{{ getProductName(r.productId) }}</span>
+                  <span class="product-sku">{{ getProductSku(r.productId) }}</span>
+                </div>
+              </td>
               <td>{{ getLocationName(r.locationId) }}</td>
               <td class="text-right font-mono font-bold">{{ r.quantity }}</td>
               <td>
@@ -624,6 +655,11 @@
                     Cancel & Release
                   </button>
                 </div>
+              </td>
+            </tr>
+            <tr *ngIf="reservations.length === 0 && !loadingReservations">
+              <td colspan="8" class="text-center text-muted" style="padding: 36px 20px;">
+                No online order reservations found. Click <strong>Create Reservation</strong> to reserve stock.
               </td>
             </tr>
           </tbody>
@@ -691,6 +727,11 @@
                 </div>
               </td>
             </tr>
+            <tr *ngIf="transfers.length === 0 && !loadingTransfers">
+              <td colspan="7" class="text-center text-muted" style="padding: 36px 20px;">
+                No inter-store transfers found. Click <strong>New Transfer</strong> to dispatch inventory between stores.
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -732,7 +773,12 @@
           </thead>
           <tbody>
             <tr *ngFor="let s of scrapRequests">
-              <td>{{ getProductName(s.productId) }}</td>
+              <td>
+                <div class="product-cell">
+                  <span class="product-name" [title]="s.productId">{{ getProductName(s.productId) }}</span>
+                  <span class="product-sku">{{ getProductSku(s.productId) }}</span>
+                </div>
+              </td>
               <td>{{ getLocationName(s.sourceLocationId) }}</td>
               <td class="text-right font-mono font-bold">{{ s.quantity }}</td>
               <td><span class="reason-pill">{{ s.reason }}</span></td>
@@ -751,6 +797,11 @@
                   </button>
                 </div>
                 <span *ngIf="s.state !== 'PENDING_APPROVAL'" class="text-muted">Completed</span>
+              </td>
+            </tr>
+            <tr *ngIf="scrapRequests.length === 0 && !loadingScrap">
+              <td colspan="8" class="text-center text-muted" style="padding: 36px 20px;">
+                No scrap write-off requests found. Click <strong>New Scrap Request</strong> to submit damaged goods.
               </td>
             </tr>
           </tbody>
@@ -804,6 +855,11 @@
                 </div>
               </td>
             </tr>
+            <tr *ngIf="counts.length === 0 && !loadingCounts">
+              <td colspan="7" class="text-center text-muted" style="padding: 36px 20px;">
+                No cycle counts scheduled. Click <strong>Start Cycle Count</strong> to baseline shelf stock.
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -819,6 +875,18 @@
           <p class="text-muted">Compares sum of DONE movements against current physical quant rows.</p>
         </div>
         <button class="btn btn-primary" (click)="runReconciliation()">Run Full Audit</button>
+      </div>
+
+      <div *ngIf="loadingReconciliation" class="loading-state">
+        <div class="spinner"></div>
+        <p>Running continuous double-entry ledger audit across all warehouses...</p>
+      </div>
+
+      <div *ngIf="!reconciliationReport && !loadingReconciliation" class="empty-state">
+        <div class="empty-icon">⚖️</div>
+        <h3>Continuous Stock Ledger Reconciliation</h3>
+        <p>Verify mathematical zero-drift consistency by reconciling the entire immutable stock movement history against current physical quant balances across all 25 FreshMart stores.</p>
+        <button class="btn btn-primary" (click)="runReconciliation()">Run Full Audit Now</button>
       </div>
 
       <div *ngIf="reconciliationReport" class="audit-summary-box" [class.audit-passed]="reconciliationReport.status === 'RECONCILED'">
