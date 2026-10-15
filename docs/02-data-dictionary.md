@@ -1,176 +1,150 @@
-# Data Dictionary: PostgreSQL Inventory Schema — P02 Stock Ledger
+# Data Dictionary: Inventory II — Database Schema & Field Reference
 
-Database Engine: PostgreSQL 18.6 (Neon Serverless / Localhost)  
-ORM: Drizzle ORM (`drizzle-orm v0.45.4`)  
-Migration Script: `drizzle/0000_jittery_the_fury.sql`  
+This document provides an exhaustive reference for the database schema implementing **P03: Lots, Reservations, Transfers, and Counts** on PostgreSQL using Drizzle ORM.
 
 ---
 
-## 1. Schema Overview & Architecture
+## 1. Table: `inv_lots`
 
-The database consists of **4 core tables**:
-1. [`inv_warehouses`](#2-table-inv_warehouses): Top-level merchant facilities.
-2. [`inv_locations`](#3-table-inv_locations): Physical racks, bins, docks, and virtual counterparties.
-3. [`inv_stock_moves`](#4-table-inv_stock_moves): The immutable double-entry movement ledger.
-4. [`inv_stock_quants`](#5-table-inv_stock_quants): Sub-millisecond physical stock snapshot cache.
+Catalog of production batches and traceable lots associated with products.
 
----
-
-## 2. Table: `inv_warehouses`
-
-Represents a merchant's physical fulfillment center, building, or distribution hub.
-
-### Column Dictionary
-
-| Column | Business meaning | Who writes it, when | Who reads it | What breaks if removed | Verdict |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| `id` | Unique UUID primary key of the warehouse | System generated (`gen_random_uuid()`) on warehouse creation | API controllers, foreign key in `inv_locations` | Relational integrity breaks; child locations cannot link to parent warehouse | `core` |
-| `merchant_id` | Identifier of the tenant/merchant owning the facility | Tenant admin or multi-tenant auth service during onboarding | Auth guards, tenant filtering queries | Multi-tenant isolation fails; merchants could access each other's warehouses | `core` |
-| `name` | Human-readable warehouse name (e.g. `Main Fulfillment Hub`) | Warehouse administrator on creation or rename | UI dashboard, shipping labels, pick sheets | Users see raw UUIDs instead of friendly facility names | `core` |
-| `code` | Unique short alphanumeric identifier (e.g. `WH-MAIN`) | Admin on setup; must be globally unique across system | Barcode scanners, ERP integrations, pick lists | Quick-search and barcode integration fail; ambiguous short codes | `core` |
-| `address` | Structured JSON containing street, city, state, postal code, coordinates | Admin on setup; updated when warehouse relocates | Shipping carriers, freight delivery routers | Automatic freight calculation and courier dispatch fail | `core` |
-| `is_active` | Soft-disable flag allowing decommissioning without deleting historical data | Operations manager when closing a facility | Inventory lookup filters, order router | Decommissioned warehouses continue receiving new inbound stock | `core` |
-| `is_default` | Indicates merchant's primary fulfillment center for order routing | Admin during setup; enforced at most one default per merchant | E-commerce checkout order router | Default shipping location cannot be auto-selected | `core` |
-| `created_at` | Timestamp when the warehouse record was inserted | System automatically on row creation (`NOW()`) | Audit logs, compliance reports | Cannot audit facility history or onboarding sequence | `core` |
-| `updated_at` | Timestamp when warehouse metadata was last modified | Backend service automatically on update | Cache invalidation layers, sync workers | Distributed caches fail to invalidate stale warehouse data | `core` |
-
-### Constraints & Indexes
-- Primary Key: `PRIMARY KEY (id)`
-- Unique Code: `UNIQUE (code)`
-- Partial Unique Index: `CREATE UNIQUE INDEX inv_warehouses_one_default_per_merchant ON inv_warehouses (merchant_id) WHERE is_default = true;`
+| Column | SQL Type | Nullable | Constraints & FK | Business Meaning & FreshMart Example | Read/Write Roles | Breaking Condition | Audit Verdict |
+|---|---|---|---|---|---|---|---|
+| `id` | `uuid` | No | PK, `gen_random_uuid()` | Immutable internal identifier for a lot batch. | R: All<br>W: Lot Receipt API | Null or duplicate causes primary key collision. | Verified |
+| `product_id` | `uuid` | No | Unique composite with `name` | Catalog product identifier (e.g. Milk 1L). | R: All<br>W: Receipt | Orphaned lot without product reference. | Verified |
+| `name` | `varchar(100)` | No | Unique composite `(product_id, name)` | Manufacturer batch code (e.g. `LOT-MILK-2026-A1`). | R: POS, WMS<br>W: Procurement | Duplicate batch code for same product corrupts lot tracking. | Verified |
+| `vendor_id` | `uuid` | Yes | FK to `vendors(id)` | Supplier/manufacturer of origin (e.g. Amul Dairy Hub). | R: Audit<br>W: Procurement | Vendor deletion sets reference to NULL. | Verified |
+| `manufacturing_date` | `date` | Yes | None | Date product was processed or packaged (e.g. `2026-10-01`). | R: QA<br>W: Procurement | Future date indicates mislabeling. | Verified |
+| `expiry_date` | `date` | Yes | Indexed | Regulatory expiration date (e.g. `2026-10-18`). Basis for FEFO. | R: FEFO Engine<br>W: Procurement | Null implies non-perishable; past date blocks sales. | Verified |
+| `reference` | `varchar(100)` | Yes | None | External invoice or bill of lading reference. | R: Accounting<br>W: Receipt | None (informational). | Verified |
+| `notes` | `text` | Yes | None | Quality notes, inspection certificates, or storage guidelines. | R: Ops<br>W: Ops | None. | Verified |
+| `created_at` | `timestamptz` | No | Default `now()` | Audit timestamp when batch was registered in ERP. | R: Audit<br>W: System | Clock skew on insert. | Verified |
 
 ---
 
-## 3. Table: `inv_locations`
+## 2. Table: `inv_transfers`
 
-Represents physical storage zones (aisles, racks, shelves, bins) and virtual counterparties (vendors, customers, scrap).
+Coordinates multi-step inter-store shipments, transfers, and receipts.
 
-### Column Dictionary
-
-| Column | Business meaning | Who writes it, when | Who reads it | What breaks if removed | Verdict |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| `id` | Unique UUID primary key of the location | System generated (`gen_random_uuid()`) on location setup | Foreign key in `inv_stock_moves` and `inv_stock_quants` | System cannot identify specific bins, racks, or vendor endpoints | `core` |
-| `warehouse_id` | Foreign key linking zone to parent warehouse | Admin when configuring location hierarchy | Warehouse filtering, stock rollup queries | Location loses physical facility association; cross-warehouse leaks | `core` |
-| `parent_location_id` | Self-referencing FK for sub-location trees (e.g. Aisle $\rightarrow$ Shelf $\rightarrow$ Bin) | Admin when defining nested warehouse topography | Picking route optimizers, tree-view UI components | Hierarchical warehouse topography flattens; cannot group by Aisle | `core` |
-| `name` | Human-readable name (e.g. `Pallet Rack A-01`) | Warehouse supervisor during floor setup | Picking tickets, mobile warehouse scanner UI | Floor workers cannot locate physical bins | `core` |
-| `code` | Short zone code unique within the warehouse (e.g. `RACK-A01`) | Supervisor on location creation | Barcode scanners, EDI messages | Scanners cannot route stock via short bin codes | `core` |
-| `type` | Domain classification (`INTERNAL`, `SUPPLIER`, `CUSTOMER`, `LOSS`, `SCRAP`, `TRANSIT`) | Creator on creation; defines business validation rules | Move posting engine, overdraft validator | System cannot distinguish physical inventory from vendor counterparties; overdraft protection fails | `core` |
-| `barcode` | Physical barcode sticker on shelf/bin | Floor supervisor during warehouse tagging | Mobile barcode scanners during picking/put-away | Automated barcode scanning workflows break | `core` |
-| `sort_order` | Integer defining optimal physical walking path for pickers | Operations engineer optimizing warehouse layout | Order picking wave generator | Pickers walk zig-zag paths through warehouse, increasing labor cost | `core` |
-| `is_active` | Soft-disable flag for damaged or retired shelves | Supervisor when bin is under maintenance | Put-away routing algorithms | Workers put new inventory into damaged or quarantined bins | `core` |
-| `created_at` | Record creation timestamp | System automatically (`NOW()`) | Auditing and compliance | Historical timeline lost | `core` |
-| `updated_at` | Record update timestamp | System automatically on update | Cache invalidation | Stale location properties remain cached | `core` |
-
-### Constraints & Indexes
-- Primary Key: `PRIMARY KEY (id)`
-- Foreign Key: `warehouse_id REFERENCES inv_warehouses(id) ON DELETE RESTRICT`
-- Self-Referencing Foreign Key: `parent_location_id REFERENCES inv_locations(id) ON DELETE RESTRICT`
-- Unique Location per Warehouse: `UNIQUE (warehouse_id, code)`
-- No Self-Parenting Check: `CHECK (id <> parent_location_id)`
-- Location Type Check: `CHECK (type IN ('INTERNAL', 'SUPPLIER', 'CUSTOMER', 'LOSS', 'SCRAP', 'TRANSIT'))`
-- Parent Location Index: `CREATE INDEX inv_locations_parent_idx ON inv_locations (parent_location_id);`
+| Column | SQL Type | Nullable | Constraints & FK | Business Meaning & FreshMart Example | Read/Write Roles | Breaking Condition | Audit Verdict |
+|---|---|---|---|---|---|---|---|
+| `id` | `uuid` | No | PK, `gen_random_uuid()` | Immutable transfer identifier. | R: All<br>W: System | Non-UUID or duplicate PK. | Verified |
+| `transfer_number` | `varchar(50)` | No | Unique, Indexed | Human-readable sequence number (e.g. `TR-20261015-0001`). | R: Logistics<br>W: Sequence Gen | Duplicate transfer number halts dispatch. | Verified |
+| `type` | `varchar(10)` | No | Check `INTERNAL`, `INBOUND`, `OUTBOUND` | Directional category of stock movement. | R: All<br>W: Dispatcher | Invalid type causes routing failure. | Verified |
+| `warehouse_id` | `uuid` | No | FK to `inv_warehouses(id)` | Originating store or facility (e.g. FreshMart Store 01). | R: All<br>W: Dispatcher | Missing warehouse violates multi-tenant ownership. | Verified |
+| `source_location_id` | `uuid` | Yes | FK to `inv_locations(id)` | Source internal shelf location. | R: Warehouse<br>W: Dispatcher | Missing source in INTERNAL transfer. | Verified |
+| `destination_location_id` | `uuid` | Yes | FK to `inv_locations(id)` | Destination internal shelf location. | R: Warehouse<br>W: Dispatcher | Same as source location causes self-transfer drift. | Verified |
+| `partner_id` | `varchar(100)` | Yes | None | External logistics carrier or vendor identifier. | R: Freight<br>W: Dispatcher | None. | Verified |
+| `partner_type` | `varchar(10)` | Yes | None | Partner classification (e.g. `CARRIER`, `SUPPLIER`). | R: Ops<br>W: Dispatcher | None. | Verified |
+| `reference_id` | `varchar(100)` | Yes | None | Associated Purchase Order or Dispatch Manifest #. | R: All<br>W: Dispatcher | None. | Verified |
+| `reference_type` | `varchar(30)` | Yes | None | Business document type (e.g. `STORE_REPLENISHMENT`). | R: Ops<br>W: Dispatcher | None. | Verified |
+| `state` | `varchar(12)` | No | Default `DRAFT`, Check state | Lifecycle state: `DRAFT`, `CONFIRMED`, `IN_PROGRESS`, `DONE`, `CANCELLED`. | R: All<br>W: State Machine | Mutating state backwards from `DONE` violates immutability. | Verified |
+| `scheduled_date` | `timestamptz` | Yes | None | Promised departure or delivery date. | R: Logistics<br>W: Planner | None. | Verified |
+| `done_date` | `timestamptz` | Yes | None | Timestamp when destination completed goods receipt note. | R: Audit<br>W: System | Null on completed transfer indicates incomplete workflow. | Verified |
+| `notes` | `text` | Yes | None | Driver instructions, seal numbers, or transit notes. | R: Logistics<br>W: Operator | None. | Verified |
+| `created_at` | `timestamptz` | No | Default `now()` | Date record was created. | R: Audit<br>W: System | None. | Verified |
+| `updated_at` | `timestamptz` | No | Default `now()` | Timestamp of last state change. | R: Audit<br>W: System | None. | Verified |
 
 ---
 
-## 4. Table: `inv_stock_moves`
+## 3. Table: `inv_transfer_counters`
 
-The immutable double-entry ledger. Every physical addition, deduction, transfer, and loss is recorded here.
+Transactional counter maintaining atomic sequential numbering per date.
 
-### Column Dictionary
-
-| Column | Business meaning | Who writes it, when | Who reads it | What breaks if removed | Verdict |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| `id` | Unique UUID primary key of the stock movement | System generated (`gen_random_uuid()`) on move creation | API controllers, audit logs, idempotency checks | Cannot uniquely identify or track individual movements | `core` |
-| `reference_id` | External document reference (e.g. PO-8821, SO-4402, Return ID) | Upstream ERP modules (Purchasing, Sales) on creation | Reconciliation engine, financial auditors | Cannot cross-reference inventory moves against commercial invoices | `core` |
-| `reference_type` | Business category (`GRN`, `SALE`, `RETURN`, `TRANSFER`, `ADJUSTMENT`, `SCRAP`) | Operator or API client during move initialization | Analytics dashboards, movement history filters | Cannot report on movement motives or run tax-specific audits | `core` |
-| `product_id` | UUID of the product being moved | Move initiator on creation | Quant update engine, valuation calculator | Ledger cannot determine which merchandise was transferred | `core` |
-| `variant_id` | Optional UUID for specific SKU variants (e.g. Size/Color) | Move initiator if product has variants | SKU-level stock counters | Variant-level inventory accuracy is lost | `core` |
-| `lot_id` | Optional UUID for batch/serial tracking | Warehouse receiver on perishable/serialized goods inward | Recall engines, FIFO pickers, expiry monitors | Cannot execute batch recalls or track food/drug expiry | `core` |
-| `source_location_id` | Origin location from which stock departs | Move initiator on creation | Posting engine (decrements source quant) | Law of Conservation fails; cannot determine where stock came from | `core` |
-| `destination_location_id` | Target location to which stock arrives | Move initiator on creation | Posting engine (increments dest quant) | Law of Conservation fails; cannot determine where stock went | `core` |
-| `quantity` | Transfer quantity (numeric with 3-decimal precision, e.g. `12.500`) | Move initiator on creation; must be strictly $> 0$ | Quant update engine, valuation calculations | Cannot quantify physical units; decimals allow fractional units (kg, meters) | `core` |
-| `unit_cost_paise` | Unit cost in smallest currency unit (paise) at transaction time | Inwarding service from purchase invoice | FIFO/WAC financial inventory valuation engines | Inventory asset value cannot be calculated on balance sheet | `core` |
-| `state` | Lifecycle state (`DRAFT`, `CONFIRMED`, `DONE`, `CANCELLED`) | System state machine during workflow progression | Move poster, cancellation guard, UI status tags | System cannot enforce immutability or distinguish intention from physical execution | `core` |
-| `scheduled_date` | Planned date for operation execution | Warehouse scheduling dispatcher | Warehouse labor planning dashboards | Cannot anticipate future receiving or picking labor bottlenecks | `core` |
-| `done_date` | Exact timestamp when move reached `DONE` | System automatically when posting completes | Valuation calculators, historical ledger queries | Cannot reconstruct point-in-time historical inventory balances | `core` |
-| `transfer_id` | Parent transfer UUID grouping multi-line shipments | Parent delivery order or receipt generator | Shipment grouping UI, bulk dispatchers | Split lines of a multi-product order cannot be grouped together | `core` |
-| `performed_by` | Username or system agent executing the operation | Identity context on creation / posting | Fraud detection, audit logs, employee review | Cannot attribute inventory movements to specific operators | `core` |
-| `notes` | Free-text operational audit remarks | Warehouse clerk or supervisor | Dispute resolution, exception reviews | Loss or variance context (e.g. "Forklift puncture") is lost | `core` |
-| `created_at` | Record insertion timestamp | System automatically (`NOW()`) | Audit trail | Cannot establish order of move creation | `core` |
-| `updated_at` | Record update timestamp | System automatically on update | Sync workers, cache invalidators | Cache synchronization fails | `core` |
-
-### Constraints & Indexes
-- Primary Key: `PRIMARY KEY (id)`
-- Foreign Keys:
-  - `source_location_id REFERENCES inv_locations(id) ON DELETE RESTRICT`
-  - `destination_location_id REFERENCES inv_locations(id) ON DELETE RESTRICT`
-- Positive Quantity Check: `CHECK (quantity > 0)`
-- Distinct Locations Check: `CHECK (source_location_id <> destination_location_id)`
-- Reference Type Check: `CHECK (reference_type IS NULL OR reference_type IN ('GRN', 'SALE', 'RETURN', 'TRANSFER', 'ADJUSTMENT', 'SCRAP'))`
-- State Check: `CHECK (state IN ('DRAFT', 'CONFIRMED', 'DONE', 'CANCELLED'))`
-- Composite Indexes:
-  - `CREATE INDEX inv_stock_moves_product_done_idx ON inv_stock_moves (product_id, done_date);`
-  - `CREATE INDEX inv_stock_moves_source_idx ON inv_stock_moves (source_location_id);`
-  - `CREATE INDEX inv_stock_moves_destination_idx ON inv_stock_moves (destination_location_id);`
+| Column | SQL Type | Nullable | Constraints & FK | Business Meaning & FreshMart Example | Read/Write Roles | Breaking Condition | Audit Verdict |
+|---|---|---|---|---|---|---|---|
+| `date_prefix` | `varchar(8)` | No | PK (e.g. `20261015`) | Calendar date bucket for daily sequence resetting. | R: System<br>W: System | Non-8 char format breaks parsing. | Verified |
+| `last_number` | `integer` | No | Default `0` | Atomic integer incremented for each new transfer. | R: System<br>W: System | Counter collision under non-locked transaction. | Verified |
 
 ---
 
-## 5. Table: `inv_stock_quants`
+## 4. Table: `inv_reservations`
 
-High-speed physical stock snapshot table powering sub-millisecond stock-on-hand queries.
+Active customer holds and order commitments with expiration timeouts.
 
-### Column Dictionary
-
-| Column | Business meaning | Who writes it, when | Who reads it | What breaks if removed | Verdict |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| `id` | Unique UUID primary key of the snapshot row | System generated (`gen_random_uuid()`) on first item placement | API controllers, UI inline reservation editor | Cannot uniquely target snapshot partition for pessimistic locking | `core` |
-| `product_id` | UUID of the product held in stock | System on quant creation | Stock-on-hand API, e-commerce catalog sync | Catalog cannot determine which product is in stock | `core` |
-| `variant_id` | Optional UUID for product SKU variant | System on quant creation | Variant-level stock checks | Cannot verify specific size/color stock | `core` |
-| `location_id` | Physical location where stock resides | System on quant creation | Warehouse picking engine, bin lookups | Warehouse cannot locate physical bin containing items | `core` |
-| `lot_id` | Optional batch/serial lot identifier | System on batch placement | FIFO batch picking, expiration manager | Cannot isolate specific batches for dispatch | `core` |
-| `quantity` | Physical on-hand stock quantity (must be $\ge 0$) | Atomic posting engine inside `postStockMove()` | Catalog availability, store clerks, reconciliation | Physical stock balance is lost; queries would need to scan millions of ledger rows | `derived` |
-| `reserved_quantity` | Units soft-allocated to confirmed orders (must be $\le quantity$) | Order allocation engine or supervisor reservation adjustment | Available-to-promise (ATP) formula: $\text{Available} = \text{On-Hand} - \text{Reserved}$ | Overselling prevention fails; confirmed orders get double-sold | `core` |
-| `cost_price_paise` | Weighted average cost (WAC) per unit in paise | Posting engine on inbound supplier receipt | Financial inventory valuation | Balance sheet inventory asset valuation breaks | `derived` |
-| `last_count_date` | Timestamp when physical cycle count last verified this bin | Cycle counting auditor during physical audit | Cycle count scheduling engine | Audit systems cannot detect bins neglected from cycle counts | `core` |
-| `created_at` | Record insertion timestamp | System automatically (`NOW()`) | Forensic audit | Cannot determine when product was first stocked in this bin | `core` |
-| `updated_at` | Record update timestamp | System automatically on every quant change | Real-time frontend sync, cache invalidation | Cached stock balances become stale | `core` |
-
-### Constraints & Indexes
-- Primary Key: `PRIMARY KEY (id)`
-- Foreign Key: `location_id REFERENCES inv_locations(id) ON DELETE RESTRICT`
-- Unique Snapshot Partition: `UNIQUE NULLS NOT DISTINCT (product_id, variant_id, location_id, lot_id)`
-- Non-Negative Physical Stock: `CHECK (quantity >= 0)`
-- Non-Negative Reservation: `CHECK (reserved_quantity >= 0)`
-- Reservation Limit Invariant: `CHECK (reserved_quantity <= quantity)`
+| Column | SQL Type | Nullable | Constraints & FK | Business Meaning & FreshMart Example | Read/Write Roles | Breaking Condition | Audit Verdict |
+|---|---|---|---|---|---|---|---|
+| `id` | `uuid` | No | PK, `gen_random_uuid()` | Immutable reservation identifier. | R: All<br>W: System | Duplicate PK. | Verified |
+| `merchant_id` | `uuid` | No | Indexed | Merchant tenant scoping (e.g. FreshMart Retail Org). | R: Auth<br>W: Order API | Cross-tenant leak if omitted. | Verified |
+| `order_reference` | `varchar(100)` | No | Indexed | E-commerce or POS order number (e.g. `ORD-882319`). | R: Order<br>W: Order API | Empty string causes untraceable hold. | Verified |
+| `product_id` | `uuid` | No | FK to product | Item reserved for order. | R: Pickers<br>W: Order API | Missing product reference. | Verified |
+| `variant_id` | `uuid` | Yes | None | Specific product size/color variant if applicable. | R: Pickers<br>W: Order API | None. | Verified |
+| `locationId` | `uuid` | No | FK to `inv_locations(id)` | Store shelf where stock is held. | R: Pickers<br>W: Order API | Non-INTERNAL location causes phantom reservation. | Verified |
+| `lot_id` | `uuid` | Yes | FK to `inv_lots(id)` | Specific batch allocated (auto-assigned via FEFO). | R: Pickers<br>W: Order API | Assigning expired lot violates Invariant 4. | Verified |
+| `quant_id` | `uuid` | Yes | FK to `inv_stock_quants(id)` | Specific stock quant bucket reserved. | R: Ledger<br>W: System | Quant mismatch causes double reservation. | Verified |
+| `quantity` | `numeric(12,3)` | No | $> 0` | Quantity locked for order (e.g. `2.000` bottles). | R: Ledger<br>W: Order API | Zero or negative quantity breaks invariant. | Verified |
+| `state` | `varchar(12)` | No | Default `RESERVED` | State: `RESERVED`, `CONFIRMED`, `PICKED`, `DELIVERED`, `CANCELLED`, `EXPIRED`. | R: All<br>W: State Engine | Releasing already delivered reservation creates phantom stock. | Verified |
+| `expires_at` | `timestamptz` | No | Indexed | Timestamp when unconfirmed reservation will be released. | R: Worker<br>W: Order API | Missing timestamp creates indefinite ghost locks. | Verified |
+| `created_by` | `varchar(100)` | No | None | System user, customer app ID, or cashier identifier. | R: Audit<br>W: Order API | Empty user breaks audit trail. | Verified |
+| `created_at` | `timestamptz` | No | Default `now()` | Timestamp reservation was locked. | R: Audit<br>W: System | None. | Verified |
+| `updated_at` | `timestamptz` | No | Default `now()` | Timestamp of state transition. | R: Audit<br>W: System | None. | Verified |
 
 ---
 
-## 6. Important Inventory Design Decisions Explained
+## 5. Table: `inv_stock_scrap`
 
-### A. Why Stock Movements Are the Historical Record
-In traditional relational databases, updating a balance destroys previous state. If `stock` was 40 and becomes 27, all intermediate context is gone. By modeling every operation as an immutable vector $(source \rightarrow destination, quantity, timestamp, operator)$, the movement ledger becomes an append-only accounting journal that guarantees full forensic auditability.
+Audited write-offs for damaged, expired, or spoiled goods requiring independent approval.
 
-### B. Why Quants Are Maintained as a Snapshot
-Calculating on-hand stock by summing millions of ledger movements (`SELECT SUM(CASE ...) FROM inv_stock_moves`) takes seconds under load. As proven in our load testing, aggregating 1,000,000 movements collapsed throughput to 3.8 req/sec. The `inv_stock_quants` snapshot reduces stock lookup time to $< 2\text{ ms}$ ($O(1)$ indexed lookup), while the background reconciliation engine guarantees mathematical equivalence.
-
-### C. Why Quantity Must Be Positive & Direction Enforced by Locations
-Negative transfer quantities create ambiguous accounting semantics (e.g. Does a transfer of $-5$ from $A \rightarrow B$ mean adding 5 to $A$ and subtracting 5 from $B$?). By enforcing `quantity > 0` and requiring distinct source and destination locations, every move has an unambiguous, single-direction vector. Vendor receipts move from `SUPPLIER` to `INTERNAL`, customer shipments move from `INTERNAL` to `CUSTOMER`, and physical theft or shrinkage moves from `INTERNAL` to `LOSS`.
-
-### D. Conservation of Inventory Mass & Immutability
-Once a stock move reaches `DONE`, its physical units have moved. Modifying or deleting a `DONE` move would introduce phantom inventory. If an error was made, an explicit compensating transaction must be posted (e.g. an `ADJUSTMENT` movement). In any transfer between internal locations, the sum of changes is zero:
-$$\Delta Q_{\text{source}} + \Delta Q_{\text{destination}} = -Q + Q = 0$$
-
-### E. Tenant Isolation & Gaps Audit
-- **Current Enforcement**: `inv_warehouses` enforces tenant partitioning via `merchant_id`. In our current Stage G schema, locations and quants inherit tenant isolation through their parent warehouse relationship.
-- **Architectural Gap Identified**: In high-scale shared-database SaaS architectures, adding a redundant, indexed `merchant_id` directly on `inv_stock_moves` and `inv_stock_quants` combined with PostgreSQL **Row Level Security (RLS)** prevents developer query bugs from leaking stock across tenants.
+| Column | SQL Type | Nullable | Constraints & FK | Business Meaning & FreshMart Example | Read/Write Roles | Breaking Condition | Audit Verdict |
+|---|---|---|---|---|---|---|---|
+| `id` | `uuid` | No | PK, `gen_random_uuid()` | Immutable scrap record identifier. | R: All<br>W: System | Duplicate PK. | Verified |
+| `product_id` | `uuid` | No | FK to product | Damaged product being written off. | R: QA, Audit<br>W: Requester | Missing product. | Verified |
+| `lot_id` | `uuid` | Yes | FK to `inv_lots(id)` | Specific expired batch being scrapped. | R: QA, Audit<br>W: Requester | Null for non-lotted goods. | Verified |
+| `source_location_id` | `uuid` | No | FK to `inv_locations(id)` | Physical shelf where damaged item was found. | R: Audit<br>W: Requester | Non-existent location. | Verified |
+| `scrap_location_id` | `uuid` | No | FK to `inv_locations(id)` | Scrap disposal bin (`type = SCRAP`). | R: Audit<br>W: Requester | Internal location used as scrap hides loss. | Verified |
+| `quantity` | `numeric(12,3)` | No | $> 0` | Physical units scrapped (e.g. `5.000` broken jars). | R: Audit<br>W: Requester | Quantity $> \text{Available}$ overdrafts shelf stock. | Verified |
+| `reason` | `varchar(50)` | No | Check reason codes | Reason: `EXPIRED_LOT`, `DAMAGED_CARTON`, `TEMPERATURE_FAIL`. | R: Management<br>W: Requester | Invalid reason prevents insurance claims. | Verified |
+| `state` | `varchar(20)` | No | Default `PENDING_APPROVAL` | `PENDING_APPROVAL`, `APPROVED`, `REJECTED`. | R: All<br>W: Manager | Auto-approving without second persona enables fraud. | Verified |
+| `requested_by` | `varchar(100)` | No | None | Employee discovering damage (e.g. `clerk-ramesh`). | R: Audit<br>W: Requester | Empty user. | Verified |
+| `approved_by` | `varchar(100)` | Yes | None | Store Manager signing off (must $\neq \text{requested\_by}$). | R: Audit<br>W: Manager | Same user approval violates anti-fraud invariant. | Verified |
+| `rejected_by` | `varchar(100)` | Yes | None | Auditor rejecting write-off if stock is intact. | R: Audit<br>W: Auditor | None. | Verified |
+| `stock_move_id` | `uuid` | Yes | FK to `inv_stock_moves(id)` | Double-entry movement created upon approval. | R: Audit<br>W: System | Null while in `APPROVED` state violates ledger audit. | Verified |
+| `created_at` | `timestamptz` | No | Default `now()` | Timestamp request was initiated. | R: Audit<br>W: System | None. | Verified |
+| `updated_at` | `timestamptz` | No | Default `now()` | Timestamp of manager decision. | R: Audit<br>W: System | None. | Verified |
 
 ---
 
-## 7. Supplied Schema vs. Implementation Enhancements
+## 6. Table: `inv_stock_counts`
 
-| Feature | Original Problem Statement Schema | Implemented Enhancements | Rationale |
-| :--- | :--- | :--- | :--- |
-| **Quant Unique Constraint** | Standard composite unique key | `UNIQUE NULLS NOT DISTINCT (product_id, variant_id, location_id, lot_id)` | Standard SQL treats `NULL` as distinct, allowing duplicate quants when `variant_id` or `lot_id` is null. PostgreSQL 15+ `NULLS NOT DISTINCT` strictly prevents duplicates. |
-| **Reservation Constraint** | Missing in basic schema | Database check: `CHECK (reserved_quantity <= quantity)` | Guarantees at the database engine level that reservations can never exceed physical on-hand stock. |
-| **Movement Constraints** | Basic table structure | `CHECK (source_location_id <> destination_location_id)` and `CHECK (quantity > 0)` | Eliminates zero-quantity no-ops and self-transfers before reaching business logic. |
-| **Pessimistic Locking** | Not specified | `SELECT ... FOR UPDATE` row locks on quants during posting | Guarantees zero negative stock under 200+ concurrent requests. |
+Header record for physical cycle counts and inventory audits.
+
+| Column | SQL Type | Nullable | Constraints & FK | Business Meaning & FreshMart Example | Read/Write Roles | Breaking Condition | Audit Verdict |
+|---|---|---|---|---|---|---|---|
+| `id` | `uuid` | No | PK, `gen_random_uuid()` | Immutable count audit identifier. | R: All<br>W: System | Duplicate PK. | Verified |
+| `count_number` | `varchar(50)` | No | Unique, Indexed | Reference code (e.g. `CNT-20261015-001`). | R: Audit<br>W: System | Duplicate count number. | Verified |
+| `warehouse_id` | `uuid` | No | FK to `inv_warehouses(id)` | Store being audited (e.g. FreshMart Store 02). | R: All<br>W: Auditor | Missing warehouse. | Verified |
+| `location_id` | `uuid` | No | FK to `inv_locations(id)` | Specific aisle or cold room counted. | R: Auditor<br>W: Auditor | Missing location. | Verified |
+| `counted_by` | `varchar(100)` | No | None | Physical auditor name (e.g. `auditor-sharma`). | R: Audit<br>W: Auditor | Anonymous count breaks accountability. | Verified |
+| `state` | `varchar(15)` | No | Default `DRAFT` | `DRAFT` (counting), `REVIEW`, `POSTED`, `CANCELLED`. | R: All<br>W: Auditor | Modifying lines of `POSTED` count corrupts baseline. | Verified |
+| `notes` | `text` | Yes | None | Audit scope description or shift notes. | R: Audit<br>W: Auditor | None. | Verified |
+| `created_at` | `timestamptz` | No | Default `now()` | Snapshot generation timestamp. | R: Audit<br>W: System | None. | Verified |
+| `updated_at` | `timestamptz` | No | Default `now()` | Decision timestamp. | R: Audit<br>W: System | None. | Verified |
+
+---
+
+## 7. Table: `inv_stock_count_lines`
+
+Itemized comparison between system baseline and physical count.
+
+| Column | SQL Type | Nullable | Constraints & FK | Business Meaning & FreshMart Example | Read/Write Roles | Breaking Condition | Audit Verdict |
+|---|---|---|---|---|---|---|---|
+| `id` | `uuid` | No | PK, `gen_random_uuid()` | Line item identifier. | R: All<br>W: System | Duplicate PK. | Verified |
+| `count_id` | `uuid` | No | FK to `inv_stock_counts(id)` | Parent count header reference. | R: All<br>W: System | Orphaned line item. | Verified |
+| `product_id` | `uuid` | No | FK to product | Item audited. | R: All<br>W: Auditor | Missing product. | Verified |
+| `lot_id` | `uuid` | Yes | FK to `inv_lots(id)` | Batch identified on shelf during audit. | R: All<br>W: Auditor | Null for non-lotted products. | Verified |
+| `system_quantity` | `numeric(12,3)` | No | Default `0.000` | Quant balance frozen at count initialization. | R: Audit<br>W: System | Mutating system quantity post-creation falsifies baseline. | Verified |
+| `counted_quantity` | `numeric(12,3)` | No | Default `0.000` | Actual units physically discovered on shelf. | R: Audit<br>W: Auditor | Negative counted quantity. | Verified |
+| `variance_quantity` | `numeric(12,3)` | No | Calculated: $\text{Counted} - \text{System}$ | Discrepancy units ($\Delta > 0$ gain, $\Delta < 0$ loss). | R: Audit<br>W: System | Manual tampering with variance formula. | Verified |
+| `notes` | `text` | Yes | None | Explanatory note (e.g. `Box damaged behind shelf`). | R: Audit<br>W: Auditor | None. | Verified |
+
+---
+
+## 8. Modifications to Existing Tables (`inv_stock_moves` & `inv_stock_quants`)
+
+### Columns Added to `inv_stock_moves`
+- `lot_id`: `uuid` (Nullable, FK to `inv_lots(id)`, Indexed). Assigns movements to traceable product batches.
+- `transfer_id`: `uuid` (Nullable, FK to `inv_transfers(id)`, Indexed). Links double-entry dispatch and receipt legs to the parent transfer order.
+
+### Columns Added to `inv_stock_quants`
+- `lot_id`: `uuid` (Nullable, FK to `inv_lots(id)`). Partitioning key: allows multiple distinct lots of the same product to coexist at a single location with separate balances and expiration dates.
+- Constraint updated: `UNIQUE (product_id, location_id, lot_id, variant_id)` enforces strict quant uniqueness.

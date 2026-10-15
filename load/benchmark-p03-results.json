@@ -1,0 +1,81 @@
+{
+  "benchmarkTimestamp": "2026-10-15T16:59:31.131Z",
+  "platform": "FreshMart Cora ERP Inventory II (Techvisk P03)",
+  "database": "PostgreSQL 16 (Localhost)",
+  "flashSale": {
+    "scenario": "Flash-Sale Concurrency (100 units / 2,000 attempts)",
+    "totalAttempts": 2000,
+    "durationSec": 4.29,
+    "throughputReqPerSec": 465.8,
+    "successfulReservations": 100,
+    "rejectedReservations": 1900,
+    "serverErrors": 0,
+    "deadlocks": 0,
+    "reservedOnQuant": 100,
+    "availableOnQuant": 0,
+    "oversoldUnits": 0,
+    "latencyP50Ms": 94.04,
+    "latencyP95Ms": 188.85,
+    "latencyP99Ms": 350.89,
+    "invariantVerified": true
+  },
+  "abandonedReservationsComparison": [
+    {
+      "tier": "Aggressive (5 Minutes)",
+      "timeoutMinutes": 5,
+      "avgBlockedUnitsConcurrent": 56,
+      "avgBlockedValueInr": 3640,
+      "stockoutRiskScore": "1.4%",
+      "estimatedMonthlyLostSalesInr": 436800,
+      "lockContentionIndex": "1.0x"
+    },
+    {
+      "tier": "Standard / FreshMart Default (15 Minutes)",
+      "timeoutMinutes": 15,
+      "avgBlockedUnitsConcurrent": 167,
+      "avgBlockedValueInr": 10855,
+      "stockoutRiskScore": "4.2%",
+      "estimatedMonthlyLostSalesInr": 1310400,
+      "lockContentionIndex": "3.0x"
+    },
+    {
+      "tier": "Relaxed / Traditional ERP (60 Minutes)",
+      "timeoutMinutes": 60,
+      "avgBlockedUnitsConcurrent": 667,
+      "avgBlockedValueInr": 43355,
+      "stockoutRiskScore": "16.8%",
+      "estimatedMonthlyLostSalesInr": 5241600,
+      "lockContentionIndex": "12.0x"
+    }
+  ],
+  "expirySweepBenchmark": [
+    {
+      "horizonDays": 3,
+      "runs": 20,
+      "latencyP50Ms": 3.59,
+      "latencyP95Ms": 5.64,
+      "latencyP99Ms": 5.64
+    },
+    {
+      "horizonDays": 7,
+      "runs": 20,
+      "latencyP50Ms": 3.27,
+      "latencyP95Ms": 4.19,
+      "latencyP99Ms": 4.19
+    },
+    {
+      "horizonDays": 14,
+      "runs": 20,
+      "latencyP50Ms": 3.87,
+      "latencyP95Ms": 5.21,
+      "latencyP99Ms": 5.21
+    },
+    {
+      "horizonDays": 30,
+      "runs": 20,
+      "latencyP50Ms": 3.88,
+      "latencyP95Ms": 4.36,
+      "latencyP99Ms": 4.36
+    }
+  ]
+}

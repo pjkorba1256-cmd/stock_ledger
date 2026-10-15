@@ -15,6 +15,8 @@ export const createStockMoveSchema = z
       .optional(),
     productId: z.string().uuid(),
     variantId: z.string().uuid().optional(),
+    lotId: z.string().uuid().optional(),
+    transferId: z.string().uuid().optional(),
     sourceLocationId: z.string().uuid(),
     destinationLocationId: z.string().uuid(),
     quantity: z.number().positive(),

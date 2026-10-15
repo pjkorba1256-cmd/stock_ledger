@@ -105,3 +105,138 @@ export interface WarehouseItem {
   createdAt?: string;
   updatedAt?: string;
 }
+
+export interface LotItem {
+  id: string;
+  productId: string;
+  name: string;
+  vendorId?: string | null;
+  manufacturingDate?: string | null;
+  expiryDate?: string | null;
+  reference?: string | null;
+  notes?: string | null;
+  createdAt: string;
+}
+
+export interface ExpiringLotItem {
+  quantId: string;
+  warehouseId: string;
+  storeName: string;
+  storeCode: string;
+  locationId: string;
+  locationName: string;
+  productId: string;
+  lotId: string;
+  lotName: string;
+  manufacturingDate: string | null;
+  expiryDate: string;
+  daysUntilExpiry: number;
+  onHandQuantity: number;
+  reservedQuantity: number;
+  availableQuantity: number;
+  unitCostPaise: number;
+  stockValuePaise: number;
+  status: 'EXPIRED' | 'CRITICAL' | 'WARNING' | 'HEALTHY';
+}
+
+export interface ExpiringStockStoreGroup {
+  warehouseId: string;
+  storeName: string;
+  storeCode: string;
+  totalLots: number;
+  totalUnits: number;
+  expiredUnits: number;
+  criticalUnits: number;
+  warningUnits: number;
+  totalValuePaise: number;
+  items: ExpiringLotItem[];
+}
+
+export interface ExpiringStockReport {
+  asOfDate: string;
+  horizonDays: number;
+  cutoffDate: string;
+  totalExpiringLots: number;
+  totalExpiringUnits: number;
+  totalAtRiskValuePaise: number;
+  stores: ExpiringStockStoreGroup[];
+  data: ExpiringLotItem[];
+}
+
+export interface ReservationItem {
+  id: string;
+  merchantId: string;
+  orderReference: string;
+  productId: string;
+  variantId?: string | null;
+  locationId: string;
+  lotId?: string | null;
+  quantId?: string | null;
+  quantity: string;
+  state: 'RESERVED' | 'CONFIRMED' | 'PICKED' | 'DELIVERED' | 'CANCELLED' | 'EXPIRED';
+  expiresAt: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TransferLineItem {
+  productId: string;
+  lotId?: string | null;
+  quantity: string;
+  receivedQuantity?: string | null;
+  shortageQuantity?: string | null;
+}
+
+export interface TransferItem {
+  id: string;
+  transferNumber: string;
+  type: 'INTERNAL' | 'INBOUND' | 'OUTBOUND';
+  warehouseId: string;
+  sourceLocationId: string | null;
+  destinationLocationId: string | null;
+  state: 'DRAFT' | 'CONFIRMED' | 'IN_PROGRESS' | 'DONE' | 'CANCELLED';
+  scheduledDate?: string | null;
+  doneDate?: string | null;
+  notes?: string | null;
+  lines: TransferLineItem[];
+  createdAt: string;
+}
+
+export interface ScrapItem {
+  id: string;
+  productId: string;
+  lotId?: string | null;
+  sourceLocationId: string;
+  scrapLocationId: string;
+  quantity: string;
+  reason: string;
+  state: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
+  requestedBy: string;
+  approvedBy?: string | null;
+  rejectedBy?: string | null;
+  createdAt: string;
+}
+
+export interface CountLineItem {
+  id: string;
+  productId: string;
+  lotId?: string | null;
+  systemQuantity: string;
+  countedQuantity: string;
+  varianceQuantity: string;
+  notes?: string | null;
+}
+
+export interface CountItem {
+  id: string;
+  countNumber: string;
+  warehouseId: string;
+  locationId: string;
+  countedBy: string;
+  state: 'DRAFT' | 'REVIEW' | 'POSTED' | 'CANCELLED';
+  notes?: string | null;
+  lines?: CountLineItem[];
+  createdAt: string;
+}
+

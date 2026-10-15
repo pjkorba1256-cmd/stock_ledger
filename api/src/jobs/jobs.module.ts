@@ -1,10 +1,16 @@
-import { DynamicModule, Module } from '@nestjs/common';
+import { DynamicModule, forwardRef, Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { RECONCILIATION_QUEUE } from './jobs.constants.js';
+import {
+  EXPIRY_SWEEP_QUEUE,
+  RECONCILIATION_QUEUE,
+  RESERVATION_EXPIRY_QUEUE,
+} from './jobs.constants.js';
 import { JobsController } from './jobs.controller.js';
 import { JobsService } from './jobs.service.js';
 import { ReconciliationProcessor } from './reconciliation.processor.js';
+import { ReservationExpiryProcessor } from './reservation-expiry.processor.js';
+import { ExpirySweepProcessor } from './expiry-sweep.processor.js';
 import { InventoryModule } from '../inventory/inventory.module.js';
 
 @Module({})
@@ -15,27 +21,9 @@ export class JobsModule {
     if (!isRedisEnabled) {
       return {
         module: JobsModule,
-        imports: [InventoryModule],
+        imports: [forwardRef(() => InventoryModule)],
         controllers: [JobsController],
-        providers: [
-          {
-            provide: JobsService,
-            useValue: {
-              dispatchReconciliation: async (input: unknown) => ({
-                status: 'REDIS_DISABLED',
-                message:
-                  'Redis background processing is disabled. Set REDIS_ENABLED=true in .env to enable BullMQ.',
-                input,
-              }),
-              getJobStatus: async (jobId: string) => ({
-                jobId,
-                status: 'REDIS_DISABLED',
-                message:
-                  'Redis background processing is disabled. Set REDIS_ENABLED=true in .env to enable BullMQ.',
-              }),
-            },
-          },
-        ],
+        providers: [JobsService],
         exports: [JobsService],
       };
     }
@@ -44,7 +32,7 @@ export class JobsModule {
       module: JobsModule,
       imports: [
         ConfigModule,
-        InventoryModule,
+        forwardRef(() => InventoryModule),
         BullModule.forRootAsync({
           imports: [ConfigModule],
           inject: [ConfigService],
@@ -63,12 +51,19 @@ export class JobsModule {
             };
           },
         }),
-        BullModule.registerQueue({
-          name: RECONCILIATION_QUEUE,
-        }),
+        BullModule.registerQueue(
+          { name: RECONCILIATION_QUEUE },
+          { name: RESERVATION_EXPIRY_QUEUE },
+          { name: EXPIRY_SWEEP_QUEUE },
+        ),
       ],
       controllers: [JobsController],
-      providers: [JobsService, ReconciliationProcessor],
+      providers: [
+        JobsService,
+        ReconciliationProcessor,
+        ReservationExpiryProcessor,
+        ExpirySweepProcessor,
+      ],
       exports: [JobsService],
     };
   }

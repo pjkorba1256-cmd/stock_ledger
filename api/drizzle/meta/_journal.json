@@ -8,6 +8,13 @@
       "when": 1791882804147,
       "tag": "0000_jittery_the_fury",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792080000000,
+      "tag": "0001_p03_inventory_ii",
+      "breakpoints": true
     }
   ]
 }

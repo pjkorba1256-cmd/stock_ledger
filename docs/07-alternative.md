@@ -1,81 +1,104 @@
-# Alternative Architectural Analysis: Event-Sourced CQRS vs. Dual-Layer Ledger
+# Architectural Alternatives & Trade-off Analysis: Inventory II
 
-Target Project: **Techvisk P02: The Stock Ledger**  
-Citations & Industry References Consulted:
-- [Martin Fowler: Event Sourcing Pattern](https://martinfowler.com/eaaDev/EventSourcing.html)
-- [Greg Young: CQRS Documents & Event Store Architecture](https://cqrs.files.wordpress.com/2010/11/cqrs_documents.pdf)
-- [AWS Prescriptive Guidance: Implementing Event Sourcing with CQRS on AWS](https://docs.aws.amazon.com/prescriptive-guidance/latest/patterns/implement-event-sourcing-and-cqrs-pattern-using-amazon-kinesis-and-amazon-dynamodb.html)
-- [PostgreSQL 18 Manual: Concurrency Control, Row Locking & MVCC](https://www.postgresql.org/docs/current/mvcc.html)
+This document evaluates five fundamental architectural decisions in the design and implementation of **Cora ERP — Inventory II (P03)**. Each trade-off analyzes the selected approach against its alternatives, detailing technical rationales, edge cases, and operational consequences.
 
 ---
 
-## 1. The Evaluated Credible Alternative: Pure Event-Sourced CQRS
+## 1. Decision 1: Quant Reservation Counter vs. Dedicated Reservations Table
 
-In our architectural investigation, the primary alternative considered against the implemented **Synchronous Dual-Layer Model** is **Pure Event-Driven CQRS (Command Query Responsibility Segregation) with Asynchronous Materialized Projections**.
+### Options Considered:
+- **Option A (Scalar Counter on Quant Only):** Increment `inv_stock_quants.reserved_quantity` directly on checkout, with no separate reservation row.
+- **Option B (Dedicated Reservations Table Only):** Calculate reserved quantity on-the-fly using `SELECT SUM(quantity) FROM inv_reservations WHERE state = 'RESERVED'`.
+- **Option C (Hybrid Architecture — Selected):** Materialized `reserved_quantity` column on `inv_stock_quants` synchronized with discrete rows in `inv_reservations`.
 
-### Architectural Breakdown of the Alternative
-- **Write Path (Command Side)**:
-  - There is no mutable `inv_stock_quants` table on the write path.
-  - The API receives a command (`ExecuteStockTransfer`), checks business invariants against an in-memory aggregate stream, and appends an immutable event (`StockTransferExecutedEvent`) to an append-only event stream table (`inv_event_store`).
-  - The HTTP request responds immediately upon event persistence ($< 15\text{ ms}$).
-- **Read Path (Query Side)**:
-  - Background asynchronous projection workers (consuming Kafka or PostgreSQL logical replication / Debezium) listen to new events and update read-optimized materialized views (e.g. Redis hashes or Elasticsearch indices).
-  - Stock-on-hand queries read exclusively from the asynchronous projection views.
+### Trade-off Matrix:
 
----
+| Evaluation Criteria | Option A (Quant Counter Only) | Option B (Reservations Table Only) | Option C (Hybrid Architecture — Chosen) |
+|---|---|---|---|
+| **Query Latency for Available Stock** | $\mathcal{O}(1)$ Direct row read | $\mathcal{O}(N)$ Aggregation scan across reservations | $\mathcal{O}(1)$ Direct row read |
+| **Traceability to Customer Order** | None (Anonymous number) | Complete order audit trail | Complete order audit trail |
+| **Timeout & Expiration Feasibility** | Impossible (cannot know which units expire when) | High (query by `expires_at`) | High (BullMQ delayed job targets specific reservation ID) |
+| **Drift Risk** | Low | Zero | Managed via atomic transaction |
 
-## 2. In-Depth Comparison Matrix Across 8 Mandatory Dimensions
-
-| Evaluation Dimension | Implemented Synchronous Dual-Layer Model (`inv_stock_moves` + `inv_stock_quants`) | Alternative: Event-Sourced CQRS with Asynchronous Projections | Architectural Verdict |
-| :--- | :--- | :--- | :--- |
-| **1. Data Integrity** | **ACID Strong Consistency**: Ledger insertion and quant balance update commit atomically in a single PostgreSQL transaction. | **Append-Only Immutability**: Events cannot be altered; complete forensic audit trail guaranteed. | **Tie**: Both provide full forensic auditability. |
-| **2. Stock Consistency** | **Immediate Read-Your-Writes**: Balance is immediately updated upon HTTP 201 response. Zero phantom stock lag. | **Eventual Consistency**: 50ms to 2000ms projection lag. High risk of overselling during fast flash checkout. | **Dual-Layer Wins**: Immediate consistency prevents e-commerce overselling. |
-| **3. Query Performance** | **Sub-millisecond Read**: Direct indexed lookup on `inv_stock_quants` ($p50 = 18\text{ ms}$, $399.2\text{ req/s}$). | **Extremely Fast Read**: Reading from Redis cache projections ($p50 < 5\text{ ms}$). | **CQRS Wins on Reads**: Pure read model decoupled from DB engine. |
-| **4. Concurrent Operations** | **Pessimistic Row Locking (`FOR UPDATE`)**: Queues concurrent updates cleanly; tested under 200 simultaneous sales with 0 deadlocks. | **Optimistic Concurrency on Stream Version**: Fails fast on version mismatch; requires client-side retry loops. | **Dual-Layer Wins**: Zero retry storms under high contention. |
-| **5. Storage Growth** | **Controlled**: 360 bytes/move + bounded quants table ($O(\text{products} \times \text{locations})$). | **High**: Full event metadata, stream metadata, snapshots, plus projection tables. | **Dual-Layer Wins**: Lower disk footprint and index maintenance. |
-| **6. Implementation Complexity** | **Low to Moderate**: Standard NestJS + Drizzle relational transactions and foreign keys. | **High**: Requires event schemas, projection workers, dead-letter queues, idempotent consumers, and rehydration handlers. | **Dual-Layer Wins**: Maintainable by standard backend engineering teams. |
-| **7. Operational Cost** | **Low**: Single PostgreSQL instance (RDS `t4g.small` or Neon Serverless). | **High**: Requires Kafka/Kinesis cluster, Redis/Elasticsearch projections, and consumer worker pools. | **Dual-Layer Wins**: 60% lower monthly infrastructure bill. |
-| **8. Migration Risks** | **Low**: Standard relational migrations via Drizzle Kit migrations. | **Very High**: Schema evolution of events (upcasting) is notoriously prone to breaking deserialization bugs. | **Dual-Layer Wins**: Battle-tested SQL migration patterns. |
+### Technical Justification:
+Option C provides the microsecond performance required by high-traffic product browsing screens while maintaining full auditability. Every checkout hold creates an `inv_reservations` row linking the order reference, expiration timestamp, and user identity, while atomically incrementing `reserved_quantity` on the quant within the same transaction.
 
 ---
 
-## 3. Justified Recommendation: Retain Implemented Dual-Layer Design with Hybrid Projections
+## 2. Decision 2: Global Lot Scope vs. Store-Scoped Lot Scope
 
-### Decision: **Keep Current Design for Core Inventory; Adopt Hybrid Read Caching for Scale**
+### Options Considered:
+- **Option A (Store-Scoped Lots):** Each store registers its own batch codes (e.g. Store 01 has `LOT-A`, Store 04 has independent `LOT-A`).
+- **Option B (Product-Scoped Global Lots — Selected):** Unique composite constraint `(product_id, name)` in `inv_lots` across the entire enterprise.
 
-For enterprise ERP inventory management (Cora ERP), **Immediate Transactional Consistency is far more valuable than the theoretical infinite scale of Event Sourcing**. 
-- Overselling inventory is a severe business failure: canceling paid orders damages brand reputation and triggers payment processing refund fees.
-- Under the Dual-Layer design, pessimistic row locking on `inv_stock_quants` guarantees that physical stock can **never become negative** ($\text{CHECK (quantity} \ge 0)$), which cannot be guaranteed by eventual consistency without distributed two-phase commit locks.
-- The dual-layer design delivers **512+ req/sec** on a single node, which easily accommodates Tier S and Tier M retail operations (up to 500,000 movements/month) at under ₹3,000/month operating cost.
+### Trade-off Matrix:
+
+| Evaluation Criteria | Option A (Store-Scoped Lots) | Option B (Product-Scoped Global Lots — Chosen) |
+|---|---|---|
+| **Inter-Store Transfers** | Requires lot re-mapping and new ID generation at destination | Seamless: Identical lot UUID moves from Store 01 to Store 04 |
+| **Recall Traceability** | Fragmented across 25 store databases | Centralized: Single query identifies all 25 stores carrying contaminated batch |
+| **Supplier Invoicing** | Redundant entries for same supplier batch | Normalized: Supplier invoice links to one canonical lot record |
+
+### Technical Justification:
+A manufacturer batch (e.g. Amul Milk Batch #892) is a physical reality that exists independently of store geography. Enforcing `UNIQUE (product_id, name)` ensures that when Store 01 dispatches 30 units of `LOT-MILK-2026-A1` to Store 04, the lot identity is perfectly preserved across the transit and destination quants without schema fragmentation.
 
 ---
 
-## 4. Non-Destructive Migration Strategy (If Migrating to CQRS at Platform Scale)
+## 3. Decision 3: Database Sequence vs. Transactional Counter Table for Transfer Numbers
 
-If Cora ERP expands to nationwide scale ($> 50,000,000\text{ moves/month}$) requiring CQRS, the following **4-phase zero-downtime migration strategy** guarantees business continuity without data loss:
+### Options Considered:
+- **Option A (PostgreSQL Native Sequence):** `CREATE SEQUENCE transfer_seq;` generating sequential integers.
+- **Option B (UUID v4 Only):** Rely purely on raw UUIDs (e.g. `c7287c2a-c0b1-439d-83fd-39a3309588f1`).
+- **Option C (Transactional Date-Bucket Counter Table — Selected):** `inv_transfer_counters` table with `FOR UPDATE` row lock per `date_prefix`.
 
-```mermaid
-flowchart LR
-    PHASE1["Phase 1: Dual-Write\n(Shadow Ingestion)"] --> PHASE2["Phase 2: Reconciliation\n& Projection Parity"]
-    PHASE2 --> PHASE3["Phase 3: Read Cutover\n(Canary Routing)"]
-    PHASE3 --> PHASE4["Phase 4: Write Cutover\n(Full Event Sourcing)"]
-```
+### Trade-off Matrix:
 
-### Phase 1: Dual-Write (Shadow Ingestion)
-- Modify NestJS `postStockMove()` to write the transactional movement to PostgreSQL as usual, and asynchronously publish a `StockMovedDomainEvent` to a Kafka queue.
-- A new Projection Worker consumes Kafka and builds the new read-model in Redis.
-- Zero client-facing traffic is routed to the new read model.
+| Evaluation Criteria | Option A (PostgreSQL Sequence) | Option B (UUID Only) | Option C (Counter Table — Chosen) |
+|---|---|---|---|
+| **Human Readability** | Moderate (just a raw number) | Unusable on paper delivery manifests | Excellent (`TR-20261015-0001`) |
+| **Daily Sequence Reset** | Complex (requires nightly cron to reset sequence) | N/A | Automatic (keyed by date string `YYYYMMDD`) |
+| **Gap-Free Guarantees** | Rollbacks leave gaps in sequence | N/A | Strictly gap-free when committed inside transaction |
+| **Concurrency Throughput** | Very High (> 10,000 req/s) | Infinite | High (~1,500 req/s with row-level lock) |
 
-### Phase 2: Reconciliation & Data Parity Verification
-- Run a daily automated reconciliation script comparing the Redis projection balances against PostgreSQL `inv_stock_quants`.
-- The system must demonstrate **100.00% parity across 14 consecutive days** before proceeding to cutover.
+### Technical Justification:
+In physical freight logistics, truck drivers and store receivers cannot communicate via 36-character UUID strings. They require formatted, sequential bill-of-lading numbers resetting daily (`TR-YYYYMMDD-XXXX`). Option C ensures that concurrent transfer dispatches generate strictly sequential, collision-free numbers without requiring background cron resets.
 
-### Phase 3: Read Traffic Canary Cutover
-- Route 10% of read traffic (`GET /inventory/stock-on-hand`) to the Redis projection.
-- Monitor latency and error rates in Datadog/CloudWatch.
-- Incrementally increase routing: $10\% \rightarrow 25\% \rightarrow 50\% \rightarrow 100\%$.
+---
 
-### Phase 4: Write Cutover & Rollback Contingency
-- Switch the write path to append-only event ingestion.
-- **Rollback Plan**:
-  If projection lag exceeds 500ms or event ordering bugs emerge, flip the feature flag `USE_CQRS_READS=false`. The system immediately falls back to reading the PostgreSQL `inv_stock_quants` table with zero data loss, because the relational schema was continuously maintained in parallel throughout the transition.
+## 4. Decision 4: Static Cost on Quant vs. FIFO/FEFO Cost Layers
+
+### Options Considered:
+- **Option A (Static Average Cost on Product):** Product record has a single mutable `cost_price_paise` column.
+- **Option B (Quant-Level Lot Costing — Selected):** Each `inv_stock_quants` bucket retains the unit purchase cost from the lot Goods Receipt Note (GRN).
+- **Option C (Full Perpetual FIFO/LIFO Accounting Layers):** Separate financial cost queues decoupled from physical storage bins.
+
+### Trade-off Matrix:
+
+| Evaluation Criteria | Option A (Product Average Cost) | Option B (Quant-Level Lot Costing — Chosen) | Option C (Perpetual Accounting Layers) |
+|---|---|---|---|
+| **Inventory Valuation Accuracy** | Poor (distorts margins when vendor prices fluctuate) | High (exact batch valuation linked to lot) | Highest |
+| **Implementation Complexity** | Trivial | Moderate | Extremely High (requires complex ledger revaluations) |
+| **FEFO Margin Alignment** | Disconnected from physical batch | Matched: Selling older lot realizes its true historical cost | Matched |
+
+### Technical Justification:
+In grocery retail, wholesale prices fluctuate weekly. Option B embeds `cost_price_paise` directly into the `inv_stock_quants` row created during lot receipt. When a lot is allocated under FEFO, the movement records the true batch acquisition cost, enabling precise profit margin calculation per store without the massive complexity of full perpetual financial accounting engines.
+
+---
+
+## 5. Decision 5: Dedicated Transit Location vs. Transfer Status Flag
+
+### Options Considered:
+- **Option A (Status Flag on Source Location):** Goods remain in source location with a flag `is_in_transit = true`.
+- **Option B (Dedicated TRANSIT Location Type — Selected):** Stock moves via double-entry movements into a distinct `TRANSIT` location (`type = 'TRANSIT'`).
+
+### Trade-off Matrix:
+
+| Evaluation Criteria | Option A (Status Flag on Source) | Option B (Dedicated TRANSIT Location — Chosen) |
+|---|---|---|
+| **Double-Entry Compliance** | Fails (requires mutable status flag queries) | Full compliance ($\text{Store A} \xrightarrow{} \text{TRANSIT} \xrightarrow{} \text{Store B}$) |
+| **Physical Reality Alignment** | Inaccurate (goods are on highway, not in Store A warehouse) | Accurate (freight carrier holds custody) |
+| **Cycle Count Isolation** | Store A auditors will see transit stock in their physical inventory reports | Transit stock is physically isolated from store audits |
+| **Shortage Auditing** | Difficult to isolate missing items | Direct: Shortage posts from `TRANSIT` to `LOSS` |
+
+### Technical Justification:
+Option B upholds the fundamental Odoo-style double-entry principle. Transit stock is not present in Store 01, nor is it present in Store 04. Placing it into a dedicated `TRANSIT` location guarantees that neither store's shelf audits or local sales engines can accidentally count or overdraft in-flight inventory.

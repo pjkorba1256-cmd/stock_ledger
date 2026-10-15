@@ -1,5 +1,5 @@
 <div class="skillset-layout">
-  <!-- Left Navigation Sidebar (Fixed) -->
+  <!-- Left Navigation Sidebar -->
   <aside class="skillset-sidebar" [class.collapsed]="sidebarCollapsed">
     <div class="sidebar-top">
       <div class="sidebar-brand">
@@ -11,7 +11,7 @@
               <line x1="12" y1="22.08" x2="12" y2="12"/>
             </svg>
           </div>
-          <span class="brand-title">StockLedger</span>
+          <span class="brand-title">FreshMart ERP</span>
         </div>
         <button class="hamburger-btn" (click)="toggleSidebar()" [title]="sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
@@ -23,23 +23,41 @@
       </div>
 
       <nav class="sidebar-nav">
+        <!-- P03 Flagship Dashboard -->
+        <button
+          class="nav-link"
+          [class.active]="activeTab === 'expiring-stock'"
+          (click)="selectTab('expiring-stock')"
+          [title]="sidebarCollapsed ? 'Expiring Stock (7 Days)' : ''"
+        >
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+          <span *ngIf="!sidebarCollapsed">Expiring Stock</span>
+          <span class="nav-badge alert-badge" *ngIf="!sidebarCollapsed && expiringReport?.totalExpiringLots">
+            {{ expiringReport?.totalExpiringLots }}
+          </span>
+        </button>
+
+        <!-- Stock On Hand -->
         <button
           class="nav-link"
           [class.active]="activeTab === 'stock-on-hand'"
-          (click)="activeTab = 'stock-on-hand'"
-          [title]="sidebarCollapsed ? 'Dashboard' : ''"
+          (click)="selectTab('stock-on-hand')"
+          [title]="sidebarCollapsed ? 'Stock On Hand' : ''"
         >
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-            <polyline points="9 22 9 12 15 12 15 22"/>
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
           </svg>
-          <span *ngIf="!sidebarCollapsed">Dashboard</span>
+          <span *ngIf="!sidebarCollapsed">Stock On Hand</span>
         </button>
 
+        <!-- Movement Ledger -->
         <button
           class="nav-link"
           [class.active]="activeTab === 'moves'"
-          (click)="activeTab = 'moves'"
+          (click)="selectTab('moves')"
           [title]="sidebarCollapsed ? 'Movement Ledger' : ''"
         >
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -50,24 +68,86 @@
           <span class="nav-badge" *ngIf="!sidebarCollapsed && movesPagination.total">{{ movesPagination.total }}</span>
         </button>
 
+        <!-- Lots & FEFO -->
         <button
           class="nav-link"
-          [class.active]="activeTab === 'new-move'"
-          (click)="activeTab = 'new-move'"
-          [title]="sidebarCollapsed ? 'Record Movement' : ''"
+          [class.active]="activeTab === 'lots'"
+          (click)="selectTab('lots')"
+          [title]="sidebarCollapsed ? 'Lots & FEFO' : ''"
         >
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" y1="8" x2="12" y2="16"/>
-            <line x1="8" y1="12" x2="16" y2="12"/>
+            <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
           </svg>
-          <span *ngIf="!sidebarCollapsed">Record Movement</span>
+          <span *ngIf="!sidebarCollapsed">Lots & FEFO</span>
         </button>
 
+        <!-- Reservations -->
+        <button
+          class="nav-link"
+          [class.active]="activeTab === 'reservations'"
+          (click)="selectTab('reservations')"
+          [title]="sidebarCollapsed ? 'Reservations' : ''"
+        >
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+            <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+          </svg>
+          <span *ngIf="!sidebarCollapsed">Reservations</span>
+        </button>
+
+        <!-- Transfers -->
+        <button
+          class="nav-link"
+          [class.active]="activeTab === 'transfers'"
+          (click)="selectTab('transfers')"
+          [title]="sidebarCollapsed ? 'Inter-Store Transfers' : ''"
+        >
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="17 1 21 5 17 9"/>
+            <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+            <polyline points="7 23 3 19 7 15"/>
+            <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+          </svg>
+          <span *ngIf="!sidebarCollapsed">Transfers</span>
+        </button>
+
+        <!-- Scrap & Approvals -->
+        <button
+          class="nav-link"
+          [class.active]="activeTab === 'scrap'"
+          (click)="selectTab('scrap')"
+          [title]="sidebarCollapsed ? 'Scrap & Approvals' : ''"
+        >
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+          </svg>
+          <span *ngIf="!sidebarCollapsed">Scrap & Approvals</span>
+        </button>
+
+        <!-- Physical Counts -->
+        <button
+          class="nav-link"
+          [class.active]="activeTab === 'counts'"
+          (click)="selectTab('counts')"
+          [title]="sidebarCollapsed ? 'Physical Counts' : ''"
+        >
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+          <span *ngIf="!sidebarCollapsed">Physical Counts</span>
+        </button>
+
+        <!-- Reconciliation -->
         <button
           class="nav-link"
           [class.active]="activeTab === 'reconciliation'"
-          (click)="activeTab = 'reconciliation'"
+          (click)="selectTab('reconciliation')"
           [title]="sidebarCollapsed ? 'Ledger Reconciliation' : ''"
         >
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -78,692 +158,1011 @@
       </nav>
     </div>
 
-    <!-- Sidebar Footer Links -->
-    <div class="sidebar-footer">
-      <div class="footer-link" [title]="sidebarCollapsed ? 'Settings' : ''">
-        <svg class="footer-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="3"/>
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-        </svg>
-        <span *ngIf="!sidebarCollapsed">Settings</span>
-      </div>
-      <div class="footer-link" [title]="sidebarCollapsed ? 'Help Center' : ''">
-        <svg class="footer-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"/>
-          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
-          <line x1="12" y1="17" x2="12.01" y2="17"/>
-        </svg>
-        <span *ngIf="!sidebarCollapsed">Help Center</span>
+    <div class="sidebar-footer" *ngIf="!sidebarCollapsed">
+      <div class="user-persona-card">
+        <div class="persona-avatar">SM</div>
+        <div class="persona-details">
+          <div class="persona-name">{{ currentApprover }}</div>
+          <div class="persona-role">Manager (Store 01)</div>
+        </div>
       </div>
     </div>
   </aside>
 
-  <!-- Main Content Dashboard -->
+  <!-- Main Content Area -->
   <main class="skillset-main">
-    <!-- Top Bar: Page Title + Quick Actions + Search + Notification + Avatar -->
-    <header class="main-topbar">
+    <!-- Topbar Banner -->
+    <header class="topbar-banner">
       <div class="topbar-left">
-        <h1 class="page-title">{{ activeTab === 'stock-on-hand' ? 'Dashboard' : activeTab === 'moves' ? 'Movement Ledger' : activeTab === 'new-move' ? 'Record Movement' : 'Ledger Reconciliation' }}</h1>
+        <h1 class="page-title">
+          <ng-container *ngIf="activeTab === 'expiring-stock'">Stock Expiring in Next {{ horizonDays }} Days — Grouped by Store</ng-container>
+          <ng-container *ngIf="activeTab === 'stock-on-hand'">Stock On Hand (Physical Quants)</ng-container>
+          <ng-container *ngIf="activeTab === 'moves'">Immutable Stock Movement Ledger</ng-container>
+          <ng-container *ngIf="activeTab === 'lots'">Traceable Lots & FEFO Allocation</ng-container>
+          <ng-container *ngIf="activeTab === 'reservations'">Inventory Reservations & Timeout Engine</ng-container>
+          <ng-container *ngIf="activeTab === 'transfers'">Two-Step Inter-Store Transfers</ng-container>
+          <ng-container *ngIf="activeTab === 'scrap'">Scrap Write-Offs & Two-Person Approval</ng-container>
+          <ng-container *ngIf="activeTab === 'counts'">Cycle Counts & Discrepancy Reconciliation</ng-container>
+          <ng-container *ngIf="activeTab === 'reconciliation'">Continuous Audit & Ledger Balance</ng-container>
+        </h1>
+        <p class="page-subtitle">FreshMart Retailer — Cora ERP Inventory II (P03)</p>
       </div>
 
-      <div class="topbar-right">
-        <!-- Search Pill -->
-        <div class="search-pill">
-          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="11" cy="11" r="8"/>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      <div class="topbar-actions">
+        <button class="btn btn-secondary" (click)="seedDemoData()" [disabled]="seedingData" title="Seed FreshMart 25-Store Retailer Data">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+            <circle cx="12" cy="12" r="3"/>
           </svg>
-          <input
-            type="text"
-            placeholder="Search..."
-            [(ngModel)]="sohProductFilter"
-            (keyup.enter)="loadStockOnHand(1)"
-          />
-        </div>
-
-        <!-- Notification Bell Pill -->
-        <button class="topbar-icon-pill" (click)="refreshAll()" title="Refresh All Data">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-          </svg>
-          <span class="bell-dot"></span>
+          {{ seedingData ? 'Seeding...' : 'Seed FreshMart Demo Data' }}
         </button>
 
-        <!-- User Profile Avatar Pill -->
-        <div class="avatar-pill" title="Operator Profile">
-          <div class="avatar-circle">SL</div>
-        </div>
+        <button class="btn btn-primary" (click)="openReceiveLotModal()">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Receive Inward Lot
+        </button>
       </div>
     </header>
 
-    <!-- Global Alert Toast Notification -->
-    <div *ngIf="alertMessage" class="skillset-toast" [ngClass]="'toast-' + alertType">
-      <span>{{ alertMessage }}</span>
+    <!-- Global Toast Alert -->
+    <div *ngIf="alertMessage" class="toast-alert" [ngClass]="'toast-' + alertType">
+      <span class="toast-text">{{ alertMessage }}</span>
       <button class="toast-close" (click)="dismissAlert()">✕</button>
     </div>
 
-    <!-- 4 KPI Metrics Grid (1 Dark Hero Card + 3 White Cards) -->
-    <section class="kpi-grid">
-      <!-- Card 1: Dark Hero Card -->
-      <div class="kpi-card hero-dark">
-        <span class="kpi-label">Total Stock Units</span>
-        <div class="kpi-value font-mono">{{ totalInventoryUnits | number: '1.3-3' }}</div>
-        <div class="kpi-trend trend-green">
-          <span>↗ 100% Invariant Conserved</span>
+    <!-- ============================================================== -->
+    <!-- TAB 1: STOCK EXPIRING IN THE NEXT 7 DAYS — GROUPED BY STORE    -->
+    <!-- ============================================================== -->
+    <section *ngIf="activeTab === 'expiring-stock'" class="content-section">
+      <!-- KPI Metric Cards -->
+      <div class="metrics-grid">
+        <div class="metric-card metric-critical">
+          <div class="metric-label">Total Expiring Lots</div>
+          <div class="metric-value">{{ expiringReport?.totalExpiringLots ?? 0 }}</div>
+          <div class="metric-sub">Within {{ horizonDays }}-day horizon</div>
+        </div>
+
+        <div class="metric-card metric-warning">
+          <div class="metric-label">At-Risk Stock Units</div>
+          <div class="metric-value">{{ expiringReport?.totalExpiringUnits ?? 0 }}</div>
+          <div class="metric-sub">Requires FEFO or scrap action</div>
+        </div>
+
+        <div class="metric-card metric-info">
+          <div class="metric-label">Total Stock Value at Risk</div>
+          <div class="metric-value">{{ formatRupees(expiringReport?.totalAtRiskValuePaise ?? 0) }}</div>
+          <div class="metric-sub">Cost valuation in ledger</div>
+        </div>
+
+        <div class="metric-card metric-neutral">
+          <div class="metric-label">Active Stores Reporting</div>
+          <div class="metric-value">{{ expiringReport?.stores?.length ?? 0 }}</div>
+          <div class="metric-sub">FreshMart grocery branches</div>
         </div>
       </div>
 
-      <!-- Card 2: White Card -->
-      <div class="kpi-card white-card">
-        <span class="kpi-label">Active Quants</span>
-        <div class="kpi-value font-mono">{{ quantsPagination.total }}</div>
-        <div class="kpi-trend trend-green">
-          <span>↗ Real-time Snapshot</span>
+      <!-- Filter and Control Bar -->
+      <div class="filter-toolbar">
+        <div class="horizon-pills">
+          <span class="filter-label">Horizon:</span>
+          <button class="pill-btn" [class.active]="horizonDays === 3" (click)="setExpiryHorizon(3)">3 Days</button>
+          <button class="pill-btn" [class.active]="horizonDays === 7" (click)="setExpiryHorizon(7)">7 Days</button>
+          <button class="pill-btn" [class.active]="horizonDays === 14" (click)="setExpiryHorizon(14)">14 Days</button>
+          <button class="pill-btn" [class.active]="horizonDays === 30" (click)="setExpiryHorizon(30)">30 Days</button>
+        </div>
+
+        <div class="filter-inputs">
+          <select class="form-select" [(ngModel)]="expiringStoreFilter">
+            <option value="">All Stores & Warehouses</option>
+            <option *ngFor="let s of expiringReport?.stores" [value]="s.warehouseId">
+              {{ s.storeName }} ({{ s.storeCode }})
+            </option>
+          </select>
+
+          <select class="form-select" [(ngModel)]="expiringStatusFilter">
+            <option value="">All Expiry Statuses</option>
+            <option value="EXPIRED">🔴 EXPIRED</option>
+            <option value="CRITICAL">🟠 CRITICAL (&le; 2d)</option>
+            <option value="WARNING">🟡 WARNING (&le; 7d)</option>
+            <option value="HEALTHY">🟢 HEALTHY (&gt; 7d)</option>
+          </select>
+
+          <button class="btn btn-secondary btn-sm" (click)="loadExpiringStock()" title="Reload data">
+            Sync Fresh
+          </button>
         </div>
       </div>
 
-      <!-- Card 3: White Card -->
-      <div class="kpi-card white-card">
-        <span class="kpi-label">Ledger Moves</span>
-        <div class="kpi-value font-mono">{{ movesPagination.total | number }}</div>
-        <div class="kpi-trend trend-green">
-          <span>↗ Auditable Records</span>
-        </div>
+      <!-- Loading State -->
+      <div *ngIf="loadingExpiring" class="loading-state">
+        <div class="spinner"></div>
+        <p>Scanning 25 FreshMart stores for perishable batches...</p>
       </div>
 
-      <!-- Card 4: White Card -->
-      <div class="kpi-card white-card">
-        <span class="kpi-label">Invariant Integrity</span>
-        <div class="kpi-value font-mono text-emerald">Non-Negative</div>
-        <div class="kpi-trend trend-green">
-          <span>↗ Zero Math Drift</span>
+      <!-- Empty State -->
+      <div *ngIf="!loadingExpiring && filteredExpiringStores.length === 0" class="empty-state">
+        <div class="empty-icon">🎉</div>
+        <h3>No Stock Expiring Within {{ horizonDays }} Days</h3>
+        <p>All on-hand inventory is healthy or you have not seeded demo inventory yet.</p>
+        <button class="btn btn-primary" (click)="seedDemoData()">Seed FreshMart Perishables</button>
+      </div>
+
+      <!-- Store Groups Display -->
+      <div *ngIf="!loadingExpiring && filteredExpiringStores.length > 0" class="store-groups-container">
+        <div *ngFor="let store of filteredExpiringStores" class="store-group-card">
+          <!-- Store Header -->
+          <div class="store-header">
+            <div class="store-info">
+              <span class="store-icon">🏪</span>
+              <div>
+                <h3 class="store-name">{{ store.storeName }}</h3>
+                <span class="store-code">Code: {{ store.storeCode }} &bull; Warehouse ID: {{ store.warehouseId.slice(0, 8) }}...</span>
+              </div>
+            </div>
+
+            <div class="store-pills">
+              <span *ngIf="store.expiredUnits > 0" class="status-badge badge-expired">
+                {{ store.expiredUnits }} Expired
+              </span>
+              <span *ngIf="store.criticalUnits > 0" class="status-badge badge-critical">
+                {{ store.criticalUnits }} Critical
+              </span>
+              <span *ngIf="store.warningUnits > 0" class="status-badge badge-warning">
+                {{ store.warningUnits }} Warning
+              </span>
+              <span class="store-val-pill">
+                At-Risk Value: {{ formatRupees(store.totalValuePaise) }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Store Lots Table -->
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Product & SKU</th>
+                  <th>Lot / Batch</th>
+                  <th>Mfg Date</th>
+                  <th>Expiry Date</th>
+                  <th>Days Left</th>
+                  <th>Status</th>
+                  <th class="text-right">On Hand</th>
+                  <th class="text-right">Reserved</th>
+                  <th class="text-right">Available</th>
+                  <th class="text-right">Stock Value</th>
+                  <th class="text-center">Workflow Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of store.items" [class.row-expired]="item.status === 'EXPIRED'">
+                  <td>
+                    <div class="product-cell">
+                      <span class="product-name">{{ getProductName(item.productId) }}</span>
+                      <span class="product-sku">{{ getProductSku(item.productId) }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="lot-badge">{{ item.lotName }}</span>
+                  </td>
+                  <td class="text-muted">{{ item.manufacturingDate ?? 'N/A' }}</td>
+                  <td class="font-semibold">{{ item.expiryDate }}</td>
+                  <td>
+                    <span [ngClass]="item.daysUntilExpiry < 0 ? 'text-danger font-bold' : item.daysUntilExpiry <= 2 ? 'text-warning font-bold' : 'text-muted'">
+                      {{ item.daysUntilExpiry < 0 ? 'Expired (' + Math.abs(item.daysUntilExpiry) + 'd ago)' : item.daysUntilExpiry + ' days' }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="status-badge" [ngClass]="getStatusBadgeClass(item.status)">
+                      {{ item.status }}
+                    </span>
+                  </td>
+                  <td class="text-right font-mono">{{ item.onHandQuantity }}</td>
+                  <td class="text-right font-mono text-muted">{{ item.reservedQuantity }}</td>
+                  <td class="text-right font-mono font-bold" [class.text-success]="item.availableQuantity > 0">
+                    {{ item.availableQuantity }}
+                  </td>
+                  <td class="text-right font-mono">{{ formatRupees(item.stockValuePaise) }}</td>
+                  <td class="text-center">
+                    <div class="action-btn-group">
+                      <!-- FEFO Sale (only non-expired) -->
+                      <button
+                        *ngIf="item.status !== 'EXPIRED' && item.availableQuantity > 0"
+                        class="btn-action btn-fefo"
+                        (click)="openFefoSaleForExpiringItem(item)"
+                        title="FEFO Sale (Sell before expiry)"
+                      >
+                        FEFO Sell
+                      </button>
+
+                      <!-- Reserve Stock -->
+                      <button
+                        *ngIf="item.status !== 'EXPIRED' && item.availableQuantity > 0"
+                        class="btn-action btn-reserve"
+                        (click)="openReserveForExpiringItem(item)"
+                        title="Reserve for Online Order"
+                      >
+                        Reserve
+                      </button>
+
+                      <!-- Transfer to another store -->
+                      <button
+                        *ngIf="item.availableQuantity > 0"
+                        class="btn-action btn-transfer"
+                        (click)="openTransferForExpiringItem(item)"
+                        title="Transfer to High-Velocity Store"
+                      >
+                        Transfer
+                      </button>
+
+                      <!-- Scrap Expired / Damaged Goods -->
+                      <button
+                        class="btn-action btn-scrap"
+                        (click)="openScrapForExpiringItem(item)"
+                        title="Request Scrap Write-Off"
+                      >
+                        Scrap
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- ====================================================================
-         BOTTOM CONTENT PANELS (Stock on Hand, Moves, New Move, Reconciliation)
-         ==================================================================== -->
-
-    <!-- TAB 01: Stock on Hand (Dashboard Table) -->
-    <section class="dashboard-card table-card" *ngIf="activeTab === 'stock-on-hand'">
-      <div class="card-header-row">
-        <div>
-          <h2 class="card-title">Stock Snapshot Table</h2>
-          <p class="card-subtitle">Real-time cache partition (`inv_stock_quants`) powering sub-millisecond stock queries.</p>
-        </div>
-        <div class="header-actions">
-          <button class="circle-icon-btn" (click)="loadStockOnHand(quantsPagination.page)" title="Refresh Table">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
-            </svg>
-          </button>
-          <button class="circle-icon-btn" (click)="activeTab = 'moves'" title="View Ledger">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="7" y1="17" x2="17" y2="7"/>
-              <polyline points="7 7 17 7 17 17"/>
-            </svg>
-          </button>
+    <!-- ============================================================== -->
+    <!-- TAB 2: STOCK ON HAND (PHYSICAL QUANTS)                         -->
+    <!-- ============================================================== -->
+    <section *ngIf="activeTab === 'stock-on-hand'" class="content-section">
+      <div class="filter-toolbar">
+        <div class="filter-inputs">
+          <input
+            type="text"
+            class="form-input"
+            placeholder="Filter by Product UUID / SKU"
+            [(ngModel)]="sohProductFilter"
+            (keyup.enter)="loadStockOnHand(1)"
+          />
+          <button class="btn btn-secondary btn-sm" (click)="loadStockOnHand(1)">Search</button>
         </div>
       </div>
 
-      <!-- Quick Filter Bar -->
-      <div class="table-filter-bar">
-        <input
-          type="text"
-          class="pill-input"
-          placeholder="Filter Product UUID..."
-          [(ngModel)]="sohProductFilter"
-          (keyup.enter)="loadStockOnHand(1)"
-        />
-        <input
-          type="text"
-          class="pill-input"
-          placeholder="Filter Location UUID..."
-          [(ngModel)]="sohLocationFilter"
-          (keyup.enter)="loadStockOnHand(1)"
-        />
-        <button class="pill-btn pill-btn-dark" (click)="loadStockOnHand(1)">Apply Filter</button>
-        <button class="pill-btn pill-btn-light" (click)="resetSohFilters()">Reset</button>
-      </div>
-
-      <!-- Table Presentation -->
-      <div class="table-responsive">
-        <table class="skillset-table">
+      <div class="table-responsive card-table">
+        <table class="data-table">
           <thead>
             <tr>
-              <th>QUANT ID</th>
-              <th>PRODUCT</th>
-              <th>LOCATION</th>
-              <th class="text-right">ON-HAND</th>
-              <th class="text-right">RESERVED</th>
-              <th class="text-right">AVAILABLE</th>
-              <th class="text-right">STATUS</th>
+              <th>Product</th>
+              <th>Location</th>
+              <th>Lot / Batch ID</th>
+              <th class="text-right">Physical On Hand</th>
+              <th class="text-right">Reserved</th>
+              <th class="text-right">Sellable Available</th>
+              <th>Last Counted</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let q of quants">
               <td>
-                <button
-                  class="chip-mono"
-                  (click)="copyToClipboard(q.id, 'Quant ID')"
-                  title="Click to copy full UUID"
-                >
-                  {{ q.id.slice(0, 8) }}…{{ q.id.slice(-4) }}
-                  <span class="copy-hint">COPY</span>
-                </button>
-              </td>
-              <td>
-                <div class="entity-cell">
-                  <span class="entity-name" [title]="getProductName(q.productId)">{{ getProductName(q.productId) }}</span>
-                  <button
-                    class="chip-mono chip-subtle"
-                    (click)="copyToClipboard(q.productId, 'Product ID')"
-                    title="Click to copy full UUID"
-                  >
-                    {{ q.productId.slice(0, 8) }}…{{ q.productId.slice(-4) }}
-                    <span class="copy-hint">COPY</span>
-                  </button>
+                <div class="product-cell">
+                  <span class="product-name">{{ getProductName(q.productId) }}</span>
+                  <span class="product-sku">{{ q.productId }}</span>
                 </div>
               </td>
+              <td>{{ getLocationName(q.locationId) }}</td>
               <td>
-                <div class="entity-cell">
-                  <span class="entity-name" [title]="getLocationName(q.locationId)">
-                    {{ getLocationName(q.locationId) }}
-                    <span class="entity-tag" *ngIf="getLocationCode(q.locationId)">{{ getLocationCode(q.locationId) }}</span>
-                  </span>
-                  <button
-                    class="chip-mono chip-subtle"
-                    (click)="copyToClipboard(q.locationId, 'Location ID')"
-                    title="Click to copy full UUID"
-                  >
-                    {{ q.locationId.slice(0, 8) }}…{{ q.locationId.slice(-4) }}
-                    <span class="copy-hint">COPY</span>
-                  </button>
-                </div>
+                <span class="lot-badge" *ngIf="q.lotId">{{ q.lotId.slice(0, 8) }}...</span>
+                <span class="text-muted" *ngIf="!q.lotId">No Lot</span>
               </td>
               <td class="text-right font-mono font-bold">{{ q.quantity }}</td>
-              <td class="text-right font-mono">{{ q.reservedQuantity }}</td>
-              <td class="text-right font-mono text-emerald font-bold">
-                {{ (+q.quantity - +q.reservedQuantity).toFixed(3) }}
+              <td class="text-right font-mono text-warning">{{ q.reservedQuantity }}</td>
+              <td class="text-right font-mono font-bold text-success">
+                {{ (Number(q.quantity) - Number(q.reservedQuantity)).toFixed(3) }}
               </td>
-              <td class="text-right">
-                <span class="status-capsule-dark">Active</span>
-              </td>
-            </tr>
-            <tr *ngIf="quants.length === 0 && !loadingSoh">
-              <td colspan="7" class="empty-cell-enhanced">
-                <div class="empty-hero">
-                  <div class="empty-hero-icon">
-                    <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.75">
-                      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-                      <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-                      <line x1="12" y1="22.08" x2="12" y2="12"/>
-                    </svg>
-                  </div>
-                  <h3 class="empty-hero-title">No Inventory Records in Cloud Database</h3>
-                  <p class="empty-hero-desc">Your database was just provisioned on Render. Click below to instantly generate warehouses, storage locations, electronics products, and audited stock ledger records.</p>
-                  <button class="pill-btn pill-btn-dark empty-hero-btn" (click)="seedDemoData()" [disabled]="seedingData">
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/>
-                    </svg>
-                    <span>{{ seedingData ? 'Seeding Demo Data…' : 'Seed Sample Inventory (1-Click)' }}</span>
-                  </button>
-                </div>
-              </td>
-            </tr>
-            <tr *ngIf="loadingSoh">
-              <td colspan="7" class="loading-cell">Querying PostgreSQL quants snapshot…</td>
+              <td class="text-muted">{{ q.lastCountDate ?? 'Never' }}</td>
             </tr>
           </tbody>
         </table>
       </div>
-
-      <!-- Pagination -->
-      <div class="pagination-bar" *ngIf="quantsPagination.totalPages > 1">
-        <span class="pag-info font-mono">Page {{ quantsPagination.page }} of {{ quantsPagination.totalPages }} ({{ quantsPagination.total }} rows)</span>
-        <div class="pag-btns">
-          <button class="pill-btn pill-btn-sm" [disabled]="quantsPagination.page <= 1" (click)="loadStockOnHand(quantsPagination.page - 1)">← Prev</button>
-          <button class="pill-btn pill-btn-sm" [disabled]="quantsPagination.page >= quantsPagination.totalPages" (click)="loadStockOnHand(quantsPagination.page + 1)">Next →</button>
-        </div>
-      </div>
     </section>
 
-    <!-- TAB 02: Stock Movement Ledger -->
-    <section class="dashboard-card table-card" *ngIf="activeTab === 'moves'">
-      <div class="card-header-row">
-        <div>
-          <h2 class="card-title">Auditable Movement Ledger</h2>
-          <p class="card-subtitle">Immutable append-only ledger (`inv_stock_moves`). Every movement changes state atomically.</p>
-        </div>
-        <div class="header-actions">
-          <button class="circle-icon-btn" (click)="loadStockMoves(movesPagination.page)" title="Refresh Ledger">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
-            </svg>
-          </button>
+    <!-- ============================================================== -->
+    <!-- TAB 3: IMMUTABLE MOVEMENT LEDGER                               -->
+    <!-- ============================================================== -->
+    <section *ngIf="activeTab === 'moves'" class="content-section">
+      <div class="filter-toolbar">
+        <div class="filter-inputs">
+          <select class="form-select" [(ngModel)]="movesStateFilter" (change)="loadStockMoves(1)">
+            <option value="">All States</option>
+            <option value="DRAFT">DRAFT</option>
+            <option value="CONFIRMED">CONFIRMED</option>
+            <option value="DONE">DONE</option>
+            <option value="CANCELLED">CANCELLED</option>
+          </select>
+
+          <select class="form-select" [(ngModel)]="movesTypeFilter" (change)="loadStockMoves(1)">
+            <option value="">All Types</option>
+            <option value="GRN">GRN (Supplier Receipt)</option>
+            <option value="SALE">SALE (Customer Sale)</option>
+            <option value="TRANSFER">TRANSFER (Movement)</option>
+            <option value="SCRAP">SCRAP (Write-Off)</option>
+            <option value="ADJUSTMENT">ADJUSTMENT (Count Reconciliation)</option>
+          </select>
         </div>
       </div>
 
-      <!-- Filter Controls -->
-      <div class="table-filter-bar">
-        <select class="pill-select" [(ngModel)]="movesStateFilter" (change)="loadStockMoves(1)">
-          <option value="">STATE: ALL</option>
-          <option value="DRAFT">DRAFT</option>
-          <option value="CONFIRMED">CONFIRMED</option>
-          <option value="DONE">DONE</option>
-          <option value="CANCELLED">CANCELLED</option>
-        </select>
-        <select class="pill-select" [(ngModel)]="movesTypeFilter" (change)="loadStockMoves(1)">
-          <option value="">TYPE: ALL</option>
-          <option value="GRN">GRN (Receipt)</option>
-          <option value="TRANSFER">TRANSFER (Internal)</option>
-          <option value="SALE">SALE (Customer)</option>
-          <option value="RETURN">RETURN</option>
-          <option value="ADJUSTMENT">ADJUSTMENT</option>
-          <option value="SCRAP">SCRAP</option>
-        </select>
-        <input
-          type="text"
-          class="pill-input"
-          placeholder="Filter Product UUID..."
-          [(ngModel)]="movesProductFilter"
-          (keyup.enter)="loadStockMoves(1)"
-        />
-        <button class="pill-btn pill-btn-dark" (click)="loadStockMoves(1)">Filter</button>
-        <button class="pill-btn pill-btn-light" (click)="resetMovesFilters()">Reset</button>
-      </div>
-
-      <!-- Moves Table -->
-      <div class="table-responsive">
-        <table class="skillset-table">
+      <div class="table-responsive card-table">
+        <table class="data-table">
           <thead>
             <tr>
-              <th>MOVE ID</th>
-              <th>TYPE</th>
-              <th>PRODUCT</th>
-              <th class="text-right">QUANTITY</th>
-              <th>SOURCE</th>
-              <th>DESTINATION</th>
-              <th>STATE</th>
-              <th>OPERATOR</th>
-              <th class="text-right">ACTION</th>
+              <th>State</th>
+              <th>Reference</th>
+              <th>Type</th>
+              <th>Product</th>
+              <th>Source &rarr; Destination</th>
+              <th class="text-right">Quantity</th>
+              <th>Operator</th>
+              <th>Date</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let m of moves">
               <td>
-                <button
-                  class="chip-mono"
-                  (click)="copyToClipboard(m.id, 'Move ID')"
-                  title="Click to copy full UUID"
-                >
-                  {{ m.id.slice(0, 8) }}…
-                  <span class="copy-hint">COPY</span>
-                </button>
+                <span class="status-badge" [ngClass]="getStatusBadgeClass(m.state)">{{ m.state }}</span>
               </td>
+              <td class="font-mono font-semibold">{{ m.referenceId ?? 'N/A' }}</td>
+              <td><span class="type-pill">{{ m.referenceType ?? 'GENERAL' }}</span></td>
+              <td>{{ getProductName(m.productId) }}</td>
               <td>
-                <span class="type-pill" [ngClass]="'pill-' + (m.referenceType || 'MOVE').toLowerCase()">
-                  {{ m.referenceType || 'MOVE' }}
+                <span class="loc-flow">
+                  {{ getLocationName(m.sourceLocationId) }} &rarr; {{ getLocationName(m.destinationLocationId) }}
                 </span>
-              </td>
-              <td>
-                <div class="entity-cell">
-                  <span class="entity-name" [title]="getProductName(m.productId)">{{ getProductName(m.productId) }}</span>
-                  <button
-                    class="chip-mono chip-subtle"
-                    (click)="copyToClipboard(m.productId, 'Product ID')"
-                    title="Click to copy full UUID"
-                  >
-                    {{ m.productId.slice(0, 8) }}…{{ m.productId.slice(-4) }}
-                    <span class="copy-hint">COPY</span>
-                  </button>
-                </div>
               </td>
               <td class="text-right font-mono font-bold">{{ m.quantity }}</td>
-              <td>
-                <div class="entity-cell">
-                  <span class="entity-name" [title]="getLocationName(m.sourceLocationId)">
-                    {{ getLocationName(m.sourceLocationId) }}
-                    <span class="entity-tag" *ngIf="getLocationCode(m.sourceLocationId)">{{ getLocationCode(m.sourceLocationId) }}</span>
-                  </span>
-                  <button
-                    class="chip-mono chip-subtle"
-                    (click)="copyToClipboard(m.sourceLocationId, 'Source ID')"
-                    title="Click to copy full UUID"
-                  >
-                    {{ m.sourceLocationId.slice(0, 8) }}…{{ m.sourceLocationId.slice(-4) }}
-                    <span class="copy-hint">COPY</span>
-                  </button>
-                </div>
-              </td>
-              <td>
-                <div class="entity-cell">
-                  <span class="entity-name" [title]="getLocationName(m.destinationLocationId)">
-                    {{ getLocationName(m.destinationLocationId) }}
-                    <span class="entity-tag" *ngIf="getLocationCode(m.destinationLocationId)">{{ getLocationCode(m.destinationLocationId) }}</span>
-                  </span>
-                  <button
-                    class="chip-mono chip-subtle"
-                    (click)="copyToClipboard(m.destinationLocationId, 'Dest ID')"
-                    title="Click to copy full UUID"
-                  >
-                    {{ m.destinationLocationId.slice(0, 8) }}…{{ m.destinationLocationId.slice(-4) }}
-                    <span class="copy-hint">COPY</span>
-                  </button>
-                </div>
-              </td>
-              <td>
-                <span class="status-capsule" [ngClass]="'capsule-' + m.state.toLowerCase()">
-                  {{ m.state }}
-                </span>
-              </td>
-              <td class="font-mono text-muted">{{ m.performedBy }}</td>
-              <td class="text-right">
-                <div class="action-btn-group">
-                  <button
-                    *ngIf="m.state === 'DRAFT'"
-                    class="action-pill-btn btn-confirm"
-                    (click)="confirmMove(m.id)"
-                  >
-                    CONFIRM
-                  </button>
-                  <button
-                    *ngIf="m.state === 'DRAFT'"
-                    class="action-pill-btn btn-cancel"
-                    (click)="cancelMove(m.id)"
-                  >
-                    CANCEL
-                  </button>
-                  <button
-                    *ngIf="m.state === 'CONFIRMED'"
-                    class="action-pill-btn btn-post"
-                    (click)="postMove(m.id)"
-                  >
-                    POST ⚡
-                  </button>
-                  <button
-                    *ngIf="m.state === 'CONFIRMED'"
-                    class="action-pill-btn btn-cancel"
-                    (click)="cancelMove(m.id)"
-                  >
-                    CANCEL
-                  </button>
-                  <span *ngIf="m.state === 'DONE'" class="status-capsule-dark">
-                    IMMUTABLE
-                  </span>
-                  <span *ngIf="m.state === 'CANCELLED'" class="status-capsule-muted">
-                    CANCELLED
-                  </span>
-                </div>
-              </td>
-            </tr>
-            <tr *ngIf="moves.length === 0 && !loadingMoves">
-              <td colspan="9" class="empty-cell-enhanced">
-                <div class="empty-hero">
-                  <h3 class="empty-hero-title">No Historical Movements Logged</h3>
-                  <p class="empty-hero-desc">The ledger has zero recorded stock movements. Click below to generate sample inward receipts, transfers, and delivery orders.</p>
-                  <button class="pill-btn pill-btn-dark empty-hero-btn" (click)="seedDemoData()" [disabled]="seedingData">
-                    🌱 Load Sample Movements
-                  </button>
-                </div>
-              </td>
-            </tr>
-            <tr *ngIf="loadingMoves">
-              <td colspan="9" class="loading-cell">Scanning ledger transaction logs…</td>
+              <td class="text-muted">{{ m.performedBy }}</td>
+              <td class="text-muted">{{ m.createdAt | date:'short' }}</td>
             </tr>
           </tbody>
         </table>
       </div>
+    </section>
 
-      <!-- Pagination -->
-      <div class="pagination-bar" *ngIf="movesPagination.totalPages > 1">
-        <span class="pag-info font-mono">Page {{ movesPagination.page }} of {{ movesPagination.totalPages }} ({{ movesPagination.total }} records)</span>
-        <div class="pag-btns">
-          <button class="pill-btn pill-btn-sm" [disabled]="movesPagination.page <= 1" (click)="loadStockMoves(movesPagination.page - 1)">← Prev</button>
-          <button class="pill-btn pill-btn-sm" [disabled]="movesPagination.page >= movesPagination.totalPages" (click)="loadStockMoves(movesPagination.page + 1)">Next →</button>
+    <!-- ============================================================== -->
+    <!-- TAB 4: TRACEABLE LOTS & FEFO ALLOCATION                        -->
+    <!-- ============================================================== -->
+    <section *ngIf="activeTab === 'lots'" class="content-section">
+      <div class="section-actions-bar">
+        <h3>Catalog Lots & Batches</h3>
+        <div class="btn-group">
+          <button class="btn btn-secondary" (click)="showFefoSaleModal = true">Sell via FEFO</button>
+          <button class="btn btn-primary" (click)="openReceiveLotModal()">Receive Inward Lot</button>
         </div>
+      </div>
+
+      <div class="table-responsive card-table">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Lot / Batch Name</th>
+              <th>Product</th>
+              <th>Manufacturing Date</th>
+              <th>Expiry Date</th>
+              <th>Reference</th>
+              <th>Notes</th>
+              <th>Registered At</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let lot of lots">
+              <td class="font-bold">{{ lot.name }}</td>
+              <td>{{ getProductName(lot.productId) }}</td>
+              <td>{{ lot.manufacturingDate ?? 'N/A' }}</td>
+              <td class="font-semibold">{{ lot.expiryDate ?? 'Non-Perishable' }}</td>
+              <td>{{ lot.reference ?? 'N/A' }}</td>
+              <td class="text-muted">{{ lot.notes ?? '-' }}</td>
+              <td class="text-muted">{{ lot.createdAt | date:'short' }}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </section>
 
-    <!-- TAB 03: Record Stock Movement Form -->
-    <section class="dashboard-card form-card" *ngIf="activeTab === 'new-move'">
-      <div class="card-header-row">
+    <!-- ============================================================== -->
+    <!-- TAB 5: RESERVATIONS ENGINE                                     -->
+    <!-- ============================================================== -->
+    <section *ngIf="activeTab === 'reservations'" class="content-section">
+      <div class="section-actions-bar">
         <div>
-          <h2 class="card-title">Record Stock Movement (Draft)</h2>
-          <p class="card-subtitle">Double-entry inventory transfer. Created in DRAFT state; quants remain unaffected until posted.</p>
+          <h3>Online Order Reservations</h3>
+          <p class="text-muted">Available = On-Hand &minus; Reserved. Auto-releases stock upon expiration.</p>
         </div>
-        <div class="preset-group">
-          <span class="preset-label font-mono">PRESETS:</span>
-          <button type="button" class="preset-pill-btn" (click)="applyInternalTransferPreset()">
-            ⚡ Transfer (Storage → Receiving)
-          </button>
-          <button type="button" class="preset-pill-btn" (click)="applySupplierGrnPreset()">
-            ⚡ Receipt (Vendor → Storage)
-          </button>
-        </div>
+        <button class="btn btn-primary" (click)="showReservationModal = true">Create Reservation</button>
       </div>
 
-      <form (ngSubmit)="submitCreateMove()" class="styled-form">
-        <div class="form-grid">
-          <div class="form-cell">
-            <label class="form-label">REFERENCE TYPE</label>
-            <select class="pill-select full-width" [(ngModel)]="newMove.referenceType" name="referenceType" required>
-              <option value="TRANSFER">TRANSFER (Internal)</option>
-              <option value="GRN">GRN (Goods Receipt Inward)</option>
-              <option value="SALE">SALE (Customer Delivery)</option>
-              <option value="RETURN">RETURN (Customer Inward)</option>
-              <option value="ADJUSTMENT">ADJUSTMENT (Audit Correction)</option>
-              <option value="SCRAP">SCRAP (Loss / Damage)</option>
-            </select>
-          </div>
-
-          <div class="form-cell">
-            <label class="form-label">PRODUCT</label>
-            <select
-              class="pill-select full-width"
-              [(ngModel)]="newMove.productId"
-              name="productId"
-              required
-            >
-              <option *ngFor="let p of knownProducts" [value]="p.id">
-                {{ p.name }} ({{ p.sku }})
-              </option>
-            </select>
-            <span class="form-hint font-mono">UUID: {{ newMove.productId }}</span>
-          </div>
-
-          <div class="form-cell">
-            <label class="form-label">SOURCE LOCATION</label>
-            <select
-              *ngIf="locations.length > 0"
-              class="pill-select full-width"
-              [(ngModel)]="newMove.sourceLocationId"
-              name="sourceLocationId"
-              required
-            >
-              <option *ngFor="let loc of locations" [value]="loc.id">
-                {{ loc.name }} [{{ loc.type }}] ({{ loc.code }})
-              </option>
-            </select>
-            <input
-              *ngIf="locations.length === 0"
-              type="text"
-              class="pill-input full-width font-mono"
-              [(ngModel)]="newMove.sourceLocationId"
-              name="sourceLocationId"
-              required
-            />
-            <span class="form-hint font-mono">{{ getLocationName(newMove.sourceLocationId) }} ({{ newMove.sourceLocationId.slice(0, 8) }}…)</span>
-          </div>
-
-          <div class="form-cell">
-            <label class="form-label">DESTINATION LOCATION</label>
-            <select
-              *ngIf="locations.length > 0"
-              class="pill-select full-width"
-              [(ngModel)]="newMove.destinationLocationId"
-              name="destinationLocationId"
-              required
-            >
-              <option *ngFor="let loc of locations" [value]="loc.id">
-                {{ loc.name }} [{{ loc.type }}] ({{ loc.code }})
-              </option>
-            </select>
-            <input
-              *ngIf="locations.length === 0"
-              type="text"
-              class="pill-input full-width font-mono"
-              [(ngModel)]="newMove.destinationLocationId"
-              name="destinationLocationId"
-              required
-            />
-            <span class="form-hint font-mono">{{ getLocationName(newMove.destinationLocationId) }} ({{ newMove.destinationLocationId.slice(0, 8) }}…)</span>
-          </div>
-
-          <div class="form-cell">
-            <label class="form-label">QUANTITY (MILLI-UNITS)</label>
-            <input
-              type="number"
-              step="0.001"
-              min="0.001"
-              class="pill-input full-width font-mono"
-              [(ngModel)]="newMove.quantity"
-              name="quantity"
-              required
-            />
-          </div>
-
-          <div class="form-cell">
-            <label class="form-label">PERFORMED BY (OPERATOR ID)</label>
-            <input
-              type="text"
-              class="pill-input full-width font-mono"
-              [(ngModel)]="newMove.performedBy"
-              name="performedBy"
-              required
-            />
-          </div>
-
-          <div class="form-cell full-span">
-            <label class="form-label">AUDIT MEMO / NOTES</label>
-            <textarea
-              class="pill-textarea full-width font-mono"
-              rows="3"
-              [(ngModel)]="newMove.notes"
-              name="notes"
-              placeholder="Audit reason, delivery reference, batch notes..."
-            ></textarea>
-          </div>
-        </div>
-
-        <div class="form-footer">
-          <button type="submit" class="pill-btn pill-btn-dark pill-btn-lg" [disabled]="submittingMove">
-            {{ submittingMove ? 'Recording Move…' : 'Record Draft Movement →' }}
-          </button>
-        </div>
-      </form>
+      <div class="table-responsive card-table">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Order Reference</th>
+              <th>Product</th>
+              <th>Location</th>
+              <th class="text-right">Quantity</th>
+              <th>State</th>
+              <th>Expires At</th>
+              <th>Created By</th>
+              <th class="text-center">Lifecycle Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let r of reservations">
+              <td class="font-mono font-bold">{{ r.orderReference }}</td>
+              <td>{{ getProductName(r.productId) }}</td>
+              <td>{{ getLocationName(r.locationId) }}</td>
+              <td class="text-right font-mono font-bold">{{ r.quantity }}</td>
+              <td>
+                <span class="status-badge" [ngClass]="getStatusBadgeClass(r.state)">{{ r.state }}</span>
+              </td>
+              <td class="font-mono text-muted">{{ r.expiresAt | date:'mediumTime' }}</td>
+              <td class="text-muted">{{ r.createdBy }}</td>
+              <td class="text-center">
+                <div class="action-btn-group">
+                  <button *ngIf="r.state === 'RESERVED'" class="btn-action btn-fefo" (click)="confirmReservation(r.id)">
+                    Confirm
+                  </button>
+                  <button *ngIf="r.state === 'CONFIRMED'" class="btn-action btn-reserve" (click)="pickReservation(r.id)">
+                    Pick Goods
+                  </button>
+                  <button *ngIf="r.state === 'PICKED'" class="btn-action btn-transfer" (click)="deliverReservation(r.id)">
+                    Deliver
+                  </button>
+                  <button *ngIf="r.state === 'RESERVED' || r.state === 'CONFIRMED'" class="btn-action btn-scrap" (click)="cancelReservation(r.id, true)">
+                    Cancel & Release
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </section>
 
-    <!-- TAB 04: Ledger Reconciliation Engine -->
-    <section class="dashboard-card table-card" *ngIf="activeTab === 'reconciliation'">
-      <div class="card-header-row">
+    <!-- ============================================================== -->
+    <!-- TAB 6: TWO-STEP INTER-STORE TRANSFERS                          -->
+    <!-- ============================================================== -->
+    <section *ngIf="activeTab === 'transfers'" class="content-section">
+      <div class="section-actions-bar">
         <div>
-          <h2 class="card-title">Conservation of Mass & Reconciliation Engine</h2>
-          <p class="card-subtitle">Calculates expected mathematical balances from `inv_stock_moves` ledger and compares against snapshot quants.</p>
+          <h3>Inter-Store Transfers</h3>
+          <p class="text-muted">Two-step transfer: Source &rarr; TRANSIT &rarr; Destination. Shortages tracked into ledger.</p>
         </div>
-        <button
-          class="pill-btn pill-btn-dark"
-          (click)="runReconciliation()"
-          [disabled]="loadingReconciliation"
-        >
-          {{ loadingReconciliation ? 'Computing Drift…' : 'Verify Ledger Integrity ⚡' }}
-        </button>
+        <button class="btn btn-primary" (click)="showTransferModal = true">New Transfer</button>
       </div>
 
-      <div *ngIf="reconciliationReport" class="reconcile-report-content">
-        <!-- Verdict Banner -->
-        <div
-          class="verdict-banner"
-          [ngClass]="reconciliationReport.status === 'RECONCILED' ? 'verdict-pass' : 'verdict-fail'"
-        >
-          <div class="verdict-icon">
-            {{ reconciliationReport.status === 'RECONCILED' ? '✓' : '⚠' }}
-          </div>
-          <div class="verdict-info">
-            <div class="verdict-title font-mono">
-              {{ reconciliationReport.status === 'RECONCILED' ? 'VERIFIED: ZERO MATHEMATICAL DRIFT DETECTED' : 'DRIFT WARNING: LEDGER & QUANTS DESYNCHRONIZED' }}
-            </div>
-            <div class="verdict-sub font-mono">
-              Examined {{ reconciliationReport.auditDetails.length }} location partitions. Conservation invariant maintained.
-            </div>
-          </div>
-        </div>
-
-        <!-- Detail Discrepancy Table -->
-        <div class="table-responsive">
-          <table class="skillset-table">
-            <thead>
-              <tr>
-                <th>LOCATION</th>
-                <th>PRODUCT</th>
-                <th class="text-right">LEDGER EXPECTED</th>
-                <th class="text-right">QUANTS SNAPSHOT</th>
-                <th class="text-right">DRIFT DELTA</th>
-                <th class="text-right">INTEGRITY</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let item of reconciliationReport.auditDetails">
-                <td>
-                  <div class="entity-cell">
-                    <span class="entity-name" [title]="item.locationName || getLocationName(item.locationId)">
-                      {{ item.locationName || getLocationName(item.locationId) }}
-                      <span class="entity-tag" *ngIf="getLocationCode(item.locationId)">{{ getLocationCode(item.locationId) }}</span>
-                    </span>
-                    <button
-                      class="chip-mono chip-subtle"
-                      (click)="copyToClipboard(item.locationId, 'Location ID')"
-                      title="Click to copy full UUID"
-                    >
-                      {{ item.locationId.slice(0, 8) }}…{{ item.locationId.slice(-4) }}
-                      <span class="copy-hint">COPY</span>
-                    </button>
-                  </div>
-                </td>
-                <td>
-                  <div class="entity-cell">
-                    <span class="entity-name" [title]="getProductName(item.productId)">{{ getProductName(item.productId) }}</span>
-                    <button
-                      class="chip-mono chip-subtle"
-                      (click)="copyToClipboard(item.productId, 'Product ID')"
-                      title="Click to copy full UUID"
-                    >
-                      {{ item.productId.slice(0, 8) }}…{{ item.productId.slice(-4) }}
-                      <span class="copy-hint">COPY</span>
-                    </button>
-                  </div>
-                </td>
-                <td class="text-right font-mono font-bold">{{ item.expectedLedgerQuantity }}</td>
-                <td class="text-right font-mono font-bold">{{ item.actualQuantQuantity }}</td>
-                <td class="text-right font-mono font-bold" [class.text-emerald]="item.isReconciled" [class.text-error]="!item.isReconciled">
-                  {{ item.discrepancy }}
-                </td>
-                <td class="text-right">
-                  <span class="status-capsule" [ngClass]="item.isReconciled ? 'capsule-done' : 'capsule-cancelled'">
-                    {{ item.isReconciled ? 'VERIFIED' : 'MISMATCH' }}
+      <div class="table-responsive card-table">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Transfer Number</th>
+              <th>Warehouse</th>
+              <th>Source &rarr; Destination</th>
+              <th>State</th>
+              <th>Dispatched Lines</th>
+              <th>Created</th>
+              <th class="text-center">Transfer Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let t of transfers">
+              <td class="font-mono font-bold">{{ t.transferNumber }}</td>
+              <td>{{ getStoreName(t.warehouseId) }}</td>
+              <td>
+                <span class="loc-flow">
+                  {{ getLocationName(t.sourceLocationId) }} &rarr; {{ getLocationName(t.destinationLocationId) }}
+                </span>
+              </td>
+              <td>
+                <span class="status-badge" [ngClass]="getStatusBadgeClass(t.state)">{{ t.state }}</span>
+              </td>
+              <td>
+                <div *ngFor="let l of t.lines" class="transfer-line-pill">
+                  {{ getProductName(l.productId) }}: Dispatched {{ l.quantity }}
+                  <span *ngIf="l.receivedQuantity !== undefined && l.receivedQuantity !== null">
+                    | Rcvd: {{ l.receivedQuantity }}
                   </span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                  <span *ngIf="l.shortageQuantity && Number(l.shortageQuantity) > 0" class="text-danger font-bold">
+                    (Shortage: {{ l.shortageQuantity }})
+                  </span>
+                </div>
+              </td>
+              <td class="text-muted">{{ t.createdAt | date:'short' }}</td>
+              <td class="text-center">
+                <div class="action-btn-group">
+                  <button *ngIf="t.state === 'DRAFT' || t.state === 'CONFIRMED'" class="btn-action btn-transfer" (click)="dispatchTransfer(t.id)">
+                    Dispatch to Transit
+                  </button>
+                  <button *ngIf="t.state === 'IN_PROGRESS'" class="btn-action btn-fefo" (click)="openReceiveTransferModal(t)">
+                    Receive Goods
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- TAB 7: SCRAP & TWO-PERSON APPROVALS                            -->
+    <!-- ============================================================== -->
+    <section *ngIf="activeTab === 'scrap'" class="content-section">
+      <div class="section-actions-bar">
+        <div>
+          <h3>Scrap Write-Offs & Fraud Controls</h3>
+          <p class="text-muted">Independent Two-Person Control: Employee cannot approve their own write-off.</p>
+        </div>
+        <button class="btn btn-primary" (click)="showScrapModal = true">New Scrap Request</button>
+      </div>
+
+      <div class="fraud-notice-banner">
+        <span class="notice-icon">🛡️</span>
+        <div class="notice-text">
+          <strong>Dual-Authorization Policy Active:</strong> Logged in as
+          <span class="font-bold underline">{{ currentApprover }}</span>. Attempts to self-approve requests created by the same user will be cryptographically rejected with 403 Forbidden.
         </div>
       </div>
 
-      <div *ngIf="!reconciliationReport && !loadingReconciliation" class="empty-reconcile-prompt">
-        <p>Click "Verify Ledger Integrity" to trigger full-table audit computation comparing movement sums with stock quants.</p>
+      <div class="table-responsive card-table">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Source Location</th>
+              <th class="text-right">Quantity</th>
+              <th>Reason</th>
+              <th>State</th>
+              <th>Requested By</th>
+              <th>Approved By</th>
+              <th class="text-center">Approval Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let s of scrapRequests">
+              <td>{{ getProductName(s.productId) }}</td>
+              <td>{{ getLocationName(s.sourceLocationId) }}</td>
+              <td class="text-right font-mono font-bold">{{ s.quantity }}</td>
+              <td><span class="reason-pill">{{ s.reason }}</span></td>
+              <td>
+                <span class="status-badge" [ngClass]="getStatusBadgeClass(s.state)">{{ s.state }}</span>
+              </td>
+              <td class="font-mono text-muted">{{ s.requestedBy }}</td>
+              <td class="font-mono text-muted">{{ s.approvedBy ?? (s.rejectedBy ? 'Rejected by ' + s.rejectedBy : 'Pending') }}</td>
+              <td class="text-center">
+                <div *ngIf="s.state === 'PENDING_APPROVAL'" class="action-btn-group">
+                  <button class="btn-action btn-fefo" (click)="approveScrap(s.id)" title="Approve write-off as Manager">
+                    Approve
+                  </button>
+                  <button class="btn-action btn-scrap" (click)="rejectScrap(s.id)" title="Reject write-off">
+                    Reject
+                  </button>
+                </div>
+                <span *ngIf="s.state !== 'PENDING_APPROVAL'" class="text-muted">Completed</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- TAB 8: PHYSICAL STOCK COUNTS & RECONCILIATION                  -->
+    <!-- ============================================================== -->
+    <section *ngIf="activeTab === 'counts'" class="content-section">
+      <div class="section-actions-bar">
+        <div>
+          <h3>Cycle Counts & Baseline Reconciliations</h3>
+          <p class="text-muted">Count shelf baseline and reconcile discrepancy with immutable ADJUSTMENT moves.</p>
+        </div>
+        <button class="btn btn-primary" (click)="showCountModal = true">Start Cycle Count</button>
+      </div>
+
+      <div class="table-responsive card-table">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Count Number</th>
+              <th>Store</th>
+              <th>Location</th>
+              <th>Auditor</th>
+              <th>State</th>
+              <th>Created</th>
+              <th class="text-center">Count Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let c of counts">
+              <td class="font-mono font-bold">{{ c.countNumber }}</td>
+              <td>{{ getStoreName(c.warehouseId) }}</td>
+              <td>{{ getLocationName(c.locationId) }}</td>
+              <td class="text-muted">{{ c.countedBy }}</td>
+              <td>
+                <span class="status-badge" [ngClass]="getStatusBadgeClass(c.state)">{{ c.state }}</span>
+              </td>
+              <td class="text-muted">{{ c.createdAt | date:'short' }}</td>
+              <td class="text-center">
+                <div class="action-btn-group">
+                  <button *ngIf="c.state === 'DRAFT' || c.state === 'REVIEW'" class="btn-action btn-transfer" (click)="openRecordCountModal(c)">
+                    Record Lines
+                  </button>
+                  <button *ngIf="c.state === 'REVIEW'" class="btn-action btn-fefo" (click)="reconcileCount(c.id)">
+                    Reconcile
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- TAB 9: LEDGER RECONCILIATION AUDIT (P02)                       -->
+    <!-- ============================================================== -->
+    <section *ngIf="activeTab === 'reconciliation'" class="content-section">
+      <div class="section-actions-bar">
+        <div>
+          <h3>Continuous Audit: Ledger vs Quant Quants</h3>
+          <p class="text-muted">Compares sum of DONE movements against current physical quant rows.</p>
+        </div>
+        <button class="btn btn-primary" (click)="runReconciliation()">Run Full Audit</button>
+      </div>
+
+      <div *ngIf="reconciliationReport" class="audit-summary-box" [class.audit-passed]="reconciliationReport.status === 'RECONCILED'">
+        <div class="audit-status">
+          Status: <strong>{{ reconciliationReport.status }}</strong>
+        </div>
+        <div class="audit-details">
+          Audited Items: {{ reconciliationReport.totalAuditedItems }} &bull; Discrepancies: {{ reconciliationReport.discrepanciesCount }}
+        </div>
       </div>
     </section>
   </main>
+</div>
+
+<!-- ============================================================== -->
+<!-- WORKFLOW MODALS                                                -->
+<!-- ============================================================== -->
+
+<!-- Modal 1: Receive Inward Lot -->
+<div *ngIf="showReceiveLotModal" class="modal-overlay">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>Receive Inward Lot (Supplier Batch)</h3>
+      <button class="modal-close-btn" (click)="showReceiveLotModal = false">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Product</label>
+        <select class="form-select" [(ngModel)]="receiveLotForm.productId">
+          <option *ngFor="let p of knownProducts" [value]="p.id">{{ p.name }} ({{ p.sku }})</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Lot / Batch Name (Must be unique per product)</label>
+        <input type="text" class="form-input" [(ngModel)]="receiveLotForm.lotName" placeholder="e.g. LOT-MILK-2026-A1"/>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Manufacturing Date</label>
+          <input type="date" class="form-input" [(ngModel)]="receiveLotForm.manufacturingDate"/>
+        </div>
+        <div class="form-group">
+          <label>Expiry Date</label>
+          <input type="date" class="form-input" [(ngModel)]="receiveLotForm.expiryDate"/>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Destination Location</label>
+          <select class="form-select" [(ngModel)]="receiveLotForm.locationId">
+            <option *ngFor="let l of locations" [value]="l.id">{{ l.name }} ({{ l.type }})</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Quantity</label>
+          <input type="number" class="form-input" [(ngModel)]="receiveLotForm.quantity"/>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="showReceiveLotModal = false">Cancel</button>
+      <button class="btn btn-primary" (click)="submitReceiveLot()">Post Inward Receipt</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal 2: FEFO Sale -->
+<div *ngIf="showFefoSaleModal" class="modal-overlay">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>FEFO Automatic Stock Allocation Sale</h3>
+      <button class="modal-close-btn" (click)="showFefoSaleModal = false">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Product</label>
+        <select class="form-select" [(ngModel)]="fefoSaleForm.productId">
+          <option *ngFor="let p of knownProducts" [value]="p.id">{{ p.name }} ({{ p.sku }})</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Store Shelf Location</label>
+          <select class="form-select" [(ngModel)]="fefoSaleForm.sourceLocationId">
+            <option *ngFor="let l of locations" [value]="l.id">{{ l.name }} ({{ l.type }})</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Quantity to Sell</label>
+          <input type="number" class="form-input" [(ngModel)]="fefoSaleForm.quantity"/>
+        </div>
+      </div>
+      <p class="text-muted text-sm">
+        🛡️ <strong>FEFO Guarantee:</strong> The engine automatically sorts eligible non-expired batches by earliest expiry date and rejects expired lots.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="showFefoSaleModal = false">Cancel</button>
+      <button class="btn btn-primary" (click)="submitFefoSale()">Allocate & Execute Sale</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal 3: Create Reservation -->
+<div *ngIf="showReservationModal" class="modal-overlay">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>Reserve Stock for Online Order</h3>
+      <button class="modal-close-btn" (click)="showReservationModal = false">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Order Reference</label>
+        <input type="text" class="form-input" [(ngModel)]="reservationForm.orderReference" placeholder="ORD-2026-X"/>
+      </div>
+      <div class="form-group">
+        <label>Product</label>
+        <select class="form-select" [(ngModel)]="reservationForm.productId">
+          <option *ngFor="let p of knownProducts" [value]="p.id">{{ p.name }} ({{ p.sku }})</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Location</label>
+          <select class="form-select" [(ngModel)]="reservationForm.locationId">
+            <option *ngFor="let l of locations" [value]="l.id">{{ l.name }} ({{ l.type }})</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Quantity</label>
+          <input type="number" class="form-input" [(ngModel)]="reservationForm.quantity"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Timeout Expiration (Minutes)</label>
+        <input type="number" class="form-input" [(ngModel)]="reservationForm.timeoutMinutes"/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="showReservationModal = false">Cancel</button>
+      <button class="btn btn-primary" (click)="submitCreateReservation()">Lock Reservation</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal 4: Create Transfer -->
+<div *ngIf="showTransferModal" class="modal-overlay">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>Create Inter-Store Transfer Order</h3>
+      <button class="modal-close-btn" (click)="showTransferModal = false">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Originating Warehouse / Store</label>
+        <select class="form-select" [(ngModel)]="transferForm.warehouseId">
+          <option *ngFor="let w of warehouses" [value]="w.id">{{ w.name }} ({{ w.code }})</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Source Location</label>
+          <select class="form-select" [(ngModel)]="transferForm.sourceLocationId">
+            <option *ngFor="let l of locations" [value]="l.id">{{ l.name }}</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Destination Location</label>
+          <select class="form-select" [(ngModel)]="transferForm.destinationLocationId">
+            <option *ngFor="let l of locations" [value]="l.id">{{ l.name }}</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Product</label>
+          <select class="form-select" [(ngModel)]="transferForm.productId">
+            <option *ngFor="let p of knownProducts" [value]="p.id">{{ p.name }}</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Quantity</label>
+          <input type="number" class="form-input" [(ngModel)]="transferForm.quantity"/>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="showTransferModal = false">Cancel</button>
+      <button class="btn btn-primary" (click)="submitCreateTransfer()">Create Transfer Order</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal 5: Receive Transfer with Shortage Input -->
+<div *ngIf="showReceiveTransferModal" class="modal-overlay">
+  <div class="modal-card modal-lg">
+    <div class="modal-header">
+      <h3>Receive Inter-Store Transfer: {{ activeTransferForReceipt?.transferNumber }}</h3>
+      <button class="modal-close-btn" (click)="showReceiveTransferModal = false">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="text-sm text-muted">
+        Inspect physical shipment. If units were damaged or lost in transit, enter actual received quantity and shortage reason.
+      </p>
+      <div *ngFor="let line of receiveTransferForm.lines; let i = index" class="receipt-line-box">
+        <div class="line-product">{{ getProductName(line.productId) }}</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Dispatched Qty</label>
+            <input type="text" class="form-input" [value]="line.dispatchedQuantity" disabled/>
+          </div>
+          <div class="form-group">
+            <label>Received Qty</label>
+            <input type="number" class="form-input" [(ngModel)]="line.receivedQuantity" (ngModelChange)="onReceiveQtyChange(i)"/>
+          </div>
+          <div class="form-group">
+            <label>Shortage Qty</label>
+            <input type="number" class="form-input text-danger font-bold" [(ngModel)]="line.shortageQuantity" disabled/>
+          </div>
+        </div>
+        <div *ngIf="line.shortageQuantity > 0" class="form-group">
+          <label>Shortage Reason</label>
+          <select class="form-select" [(ngModel)]="line.shortageReason">
+            <option value="TRANSIT_DAMAGE">Transit Damage / Breakage</option>
+            <option value="THEFT_PILFERAGE">Missing / Pilferage</option>
+            <option value="TEMPERATURE_SPOILAGE">Cold Chain Spoilage</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="showReceiveTransferModal = false">Cancel</button>
+      <button class="btn btn-primary" (click)="submitReceiveTransfer()">Confirm Physical Receipt</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal 6: Create Scrap Request -->
+<div *ngIf="showScrapModal" class="modal-overlay">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>Create Scrap Write-Off Request</h3>
+      <button class="modal-close-btn" (click)="showScrapModal = false">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Product</label>
+        <select class="form-select" [(ngModel)]="scrapForm.productId">
+          <option *ngFor="let p of knownProducts" [value]="p.id">{{ p.name }}</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Source Location</label>
+          <select class="form-select" [(ngModel)]="scrapForm.sourceLocationId">
+            <option *ngFor="let l of locations" [value]="l.id">{{ l.name }}</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Quantity</label>
+          <input type="number" class="form-input" [(ngModel)]="scrapForm.quantity"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Write-Off Reason</label>
+        <select class="form-select" [(ngModel)]="scrapForm.reason">
+          <option value="EXPIRED_LOT">Expired Beyond Shelf Life</option>
+          <option value="QUALITY_FAIL">Quality Check Failure</option>
+          <option value="TRANSIT_DAMAGE">Damaged Carton / Packaging</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Requested By</label>
+        <input type="text" class="form-input" [(ngModel)]="scrapForm.requestedBy"/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="showScrapModal = false">Cancel</button>
+      <button class="btn btn-primary" (click)="submitCreateScrap()">Submit for Approval</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal 7: Start Cycle Count -->
+<div *ngIf="showCountModal" class="modal-overlay">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>Initiate Cycle Count Baseline</h3>
+      <button class="modal-close-btn" (click)="showCountModal = false">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Store / Warehouse</label>
+        <select class="form-select" [(ngModel)]="countForm.warehouseId">
+          <option *ngFor="let w of warehouses" [value]="w.id">{{ w.name }}</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Shelf Location</label>
+        <select class="form-select" [(ngModel)]="countForm.locationId">
+          <option *ngFor="let l of locations" [value]="l.id">{{ l.name }}</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Auditor Name</label>
+        <input type="text" class="form-input" [(ngModel)]="countForm.countedBy"/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="showCountModal = false">Cancel</button>
+      <button class="btn btn-primary" (click)="submitCreateCount()">Take Baseline Snapshot</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal 8: Record Count Lines -->
+<div *ngIf="showRecordLinesModal" class="modal-overlay">
+  <div class="modal-card modal-lg">
+    <div class="modal-header">
+      <h3>Record Physical Count: {{ activeCountForRecord?.countNumber }}</h3>
+      <button class="modal-close-btn" (click)="showRecordLinesModal = false">✕</button>
+    </div>
+    <div class="modal-body">
+      <div *ngFor="let line of recordLinesForm.lines" class="receipt-line-box">
+        <div class="line-product">{{ getProductName(line.productId) }}</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>System Baseline</label>
+            <input type="number" class="form-input" [value]="line.systemQuantity" disabled/>
+          </div>
+          <div class="form-group">
+            <label>Physical Count</label>
+            <input type="number" class="form-input font-bold" [(ngModel)]="line.countedQuantity"/>
+          </div>
+          <div class="form-group">
+            <label>Variance</label>
+            <input type="number" class="form-input font-bold" [value]="line.countedQuantity - line.systemQuantity" disabled/>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="showRecordLinesModal = false">Cancel</button>
+      <button class="btn btn-primary" (click)="submitRecordCountLines()">Save Physical Counts</button>
+    </div>
+  </div>
 </div>
