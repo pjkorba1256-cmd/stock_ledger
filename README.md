@@ -112,7 +112,6 @@ d:\P02-Stock-Ledger\
 │   ├── 06-cost-model.md             # Infrastructure OpEx in INR (S/M/L) & locked inventory cost
 │   ├── 07-alternative.md            # 5 Architectural decision trade-off evaluations
 │   └── 08-decisions.md              # Decision log, time log, AI usage log, deferred items
-├── docker-compose.yml               # PostgreSQL 16 + Redis 7 local orchestration
 └── README.md                        # This setup guide
 ```
 
@@ -124,7 +123,7 @@ All commands are formatted for **Windows PowerShell**.
 
 ### Prerequisites
 - Node.js `v20.x` or higher (verified on `v24.21.0`)
-- PostgreSQL 16 (local installation or Docker)
+- PostgreSQL 16 (running locally on port 5432)
 - Git
 
 ### Step 1: Clone Repository
@@ -133,12 +132,12 @@ git clone <approved-techvisk-repo-url> P03-Stock-Ledger
 cd P03-Stock-Ledger
 ```
 
-### Step 2: Start Infrastructure (Optional Docker Compose)
-If you do not have local PostgreSQL and Redis running:
-```powershell
-docker compose up -d
+### Step 2: Configure Local Database
+Ensure local PostgreSQL is running and set `DATABASE_URL` in `api/.env`:
+```env
+DATABASE_URL=postgresql://postgres:<password>@localhost:5432/stock_ledger
 ```
-*(Alternatively, point `DATABASE_URL` in `api/.env` to your local PostgreSQL instance).*
+*(Optionally set `REDIS_ENABLED=true` and `REDIS_HOST=localhost` if BullMQ background job processing is desired).*
 
 ### Step 3: Install Backend Dependencies & Run Migrations
 ```powershell
