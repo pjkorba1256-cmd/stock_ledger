@@ -69,7 +69,7 @@ In basic inventory systems (P01/P02), stock is tracked merely as a scalar number
 ## 4. Repository Structure
 
 ```text
-d:\P02-Stock-Ledger\
+P03-Stock-Ledger/
 ├── api/                             # NestJS Backend API
 │   ├── drizzle/                     # Drizzle SQL migration files
 │   │   ├── 0000_init_stock_ledger.sql
